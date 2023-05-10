@@ -1,0 +1,669 @@
+---
+title: "Statistical Analyses"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Preparation
+## Set up 
+```{r setup}
+getwd()
+knitr::opts_knit$set(root.dir = "/home/Maren.Krafft/R_docs/Working_files")
+```
+
+## Load libraries
+```{r lib, include=FALSE}
+library("data.table")
+library(ggplot2)
+library(tidyr)
+library(plyr) 
+library(dplyr)
+library(furniture)
+library(purrr)   
+library(dplyr)      
+library(foreign)   
+library(effsize)
+```
+
+```{r}
+#install.packages("glmbb")
+library(broom)
+#devtools::install_github("atyre2/NRES803")
+#pak::pkg_install("atyre2/NRES803")
+library("NRES803")
+library("radiant.data")
+```
+## Load dataset
+```{r Load, echo=TRUE}
+#load("final/dat_excl.Rda")
+dat_excl2 <- dat_excl
+#dat_clean2 <- dat_clean
+```
+## Creating work data sets
+```{r define}
+dat <- dat_excl2
+dat2 <- dat_excl2[heart_rate>= 60 & heart_rate <=100,]
+summary(dat)
+```
+
+```{r function, include=FALSE}
+  hist.default <- function(x,
+                         breaks = "Scott",
+                         freq = NULL,
+                         include.lowest = TRUE,
+                         normalcurve = TRUE,
+                         right = TRUE,
+                         density = NULL,
+                         angle = 45,
+                         col = NULL,
+                         border = NULL,
+                         main = paste("Histogram of", xname),
+                         ylim = NULL,
+                         xlab = xname,
+                         ylab = NULL,
+                         axes = TRUE,
+                         plot = TRUE,
+                         labels = FALSE,
+                         warn.unused = TRUE,
+                         ...)  {
+
+  # https://stackoverflow.com/a/20078645/4575331
+  xname <- paste(deparse(substitute(x), 500), collapse = "\n")
+
+  suppressWarnings(
+    h <- graphics::hist.default(
+      x = x,
+      breaks = breaks,
+      freq = freq,
+      include.lowest = include.lowest,
+      right = right,
+      density = density,
+      angle = angle,
+      col = col,
+      border = border,
+      main = main,
+      ylim = ylim,
+      xlab = xlab,
+      ylab = ylab,
+      axes = axes,
+      plot = plot,
+      labels = labels,
+      warn.unused = warn.unused,
+      ...
+    )
+  )
+
+  if (normalcurve == TRUE & plot == TRUE) {
+    x <- x[!is.na(x)]
+    xfit <- seq(min(x), max(x), length = 40)
+    yfit <- dnorm(xfit, mean = mean(x), sd = sd(x))
+    if (isTRUE(freq) | (is.null(freq) & is.null(density))) {
+      yfit <- yfit * diff(h$mids[1:2]) * length(x)
+    }
+    lines(xfit, yfit, col = "black", lwd = 2)
+  }
+
+  if (plot == TRUE) {
+    invisible(h)
+  } else {
+    h
+  }
+  }
+  
+```
+
+## Summary statistics
+```{r summary}
+#summary(dat)
+
+dat %>%
+  group_by(variant) %>%
+  table1(age, sex, ca, tsh, ill_resp, ill_heart, ill_arrythmia, champers_pq,  p_duration, qrs_duration, qt, QTc_B, QTc_F, heart_rate, rr,  Q_duration_V3,  R_duration_V3,  S_duration_V3,  T_duration_V3)
+
+dat %>%
+  table1(age, sex, ca, tsh, ill_resp, ill_heart, ill_arrythmia, champers_pq,  p_duration, qrs_duration, qt, QTc_B, QTc_F, heart_rate, rr,  Q_duration_V3,  R_duration_V3,  S_duration_V3,  T_duration_V3)
+
+
+dat2 %>%
+  group_by(variant) %>%
+  table1(age, sex, ca, tsh, ill_resp, ill_heart, ill_arrythmia, champers_pq,  p_duration, qrs_duration, qt, QTc_B, QTc_F, heart_rate, rr,  Q_duration_V3,  R_duration_V3,  S_duration_V3,  T_duration_V3)
+
+dat2 %>%
+  group_by(variant) %>%
+  table1(age, sex, ca, tsh, ill_resp, ill_heart, ill_arrythmia, champers_pq,  p_duration, qrs_duration, qt, QTc_B, QTc_F, heart_rate, rr,  Q_duration_V3,  R_duration_V3,  S_duration_V3,  T_duration_V3)
+
+dat2 %>%
+  table1(age, sex, ca, tsh, ill_resp, ill_heart, ill_arrythmia, champers_pq,  p_duration, qrs_duration, qt, QTc_B, QTc_F, heart_rate, rr,  Q_duration_V3,  R_duration_V3,  S_duration_V3,  T_duration_V3)
+
+dat2 %>%
+  group_by(variant) %>%
+  table1(bmi, fit_ind)
+
+dat2 %>%
+  group_by(sex, variant) %>%
+  table1(QTc_B, QTc_F)
+```
+
+```{r}
+mean(dat$QTc_B[dat$variant ==1])
+mean(dat$QTc_B[dat$variant ==0])
+```
+
+# Statistical Analyses
+
+## Welch T-Test: Complete dataset
+```{r}
+# Test for normally 
+shapiro.test(dat$QTc_B)
+# Test for equal variance
+fligner.test(QTc_B ~ variant, dat)
+
+# Welch Two Sample t-test
+t.test(QTc_B ~ variant, data = dat, detailed = true)
+
+cohen.d(QTc_B ~ variant, var.equal = FALSE, data = dat)
+
+#Framingham
+# Test for normally 
+shapiro.test(dat$QTc_F)
+# Test for equal variance
+fligner.test(QTc_F ~ variant, dat)
+
+# Welch Two Sample t-test
+t.test(QTc_F ~ variant, data = dat, detailed = true)
+
+cohen.d(QTc_F ~ variant, var.equal = FALSE, data = dat)
+```
+
+## Welch T-Test. Dataset reduced to individuals with a normal heart rate
+```{r}
+#Bazett
+# Test for normally 
+shapiro.test(dat2$QTc_B)
+# Test for equal variance
+fligner.test(QTc_B ~ variant, dat2)
+
+# Welch Two Sample t-test
+t.test(QTc_B ~ variant, data = dat2, detailed = true)
+
+cohen.d(QTc_B ~ variant, var.equal = FALSE, data = dat2)
+
+
+#Framingham
+
+# Test for normally 
+shapiro.test(dat2$QTc_F)
+# Test for equal variance
+fligner.test(QTc_F ~ variant, dat2)
+
+# Welch Two Sample t-test
+t.test(QTc_F ~ variant, data = dat2, detailed = true)
+
+cohen.d(QTc_F ~ variant, var.equal = FALSE, data = dat2)
+```
+
+
+## Correlation for covariables
+
+```{r}
+dat_test <-dat[,c("QTc_B","age","ca","tsh", "syst_bp", "ill_resp", "ill_heart", "ill_arrythmia", "c1", "c2", "c3", "c4", "fit_ind", "bmi", "med_other")]
+sapply(dat_test, class)
+cor(dat_test, use="complete.obs")
+#cor(dat[,c(age,sex,ca,tsh,diast_bp,syst_bp,ill_resp,ill_heart,ill_arrythmia,c1,c2,c3,c4)])
+
+boxplot(dat$QTc_B)
+pairs(dat_test[,1:5], pch = 19, lower.panel = NULL)
+pairs(dat_test[,c(1, 6:10)], pch = 19, lower.panel = NULL)
+pairs(dat_test[,c(1, 11:15)], pch = 19, lower.panel = NULL)
+```
+
+
+## Linear Regression QT interval corrected with Bazett
+
+### Complete dataset
+```{r bazett dat comp}
+
+dat_ana <- dat
+a <-lm(formula = QTc_B ~ variant +age+ sex+ age*sex + c(age*age) ,data=dat_ana)
+summary(a)
+
+b <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat_ana)
+summary(b)
+
+c <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi ,data=dat_ana)
+summary(c)
+
+d <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + fit_ind,data=dat_ana)
+summary(d)
+
+e <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind,data=dat_ana)
+summary(e)
+
+f <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4+ med_other,data=dat_ana)
+summary(f)
+
+g <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind + med_other,data=dat_ana)
+summary(g)
+
+```
+```{r}
+check_assumptions(a)
+check_assumptions(b)
+check_assumptions(c)
+check_assumptions(d)
+check_assumptions(e)
+check_assumptions(f)
+check_assumptions(g)
+```
+
+### Reduced to individuals with a heart rate in the normal range
+```{r bazett dat red}
+
+dat_ana <- dat2
+a <-lm(formula = QTc_B ~ variant +age+ sex+ age*sex + c(age*age) ,data=dat_ana)
+summary(a)
+
+b <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat_ana)
+summary(b)
+
+c <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi ,data=dat_ana)
+summary(c)
+
+d <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + fit_ind,data=dat_ana)
+summary(d)
+
+e<-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind,data=dat_ana)
+summary(r)
+
+f <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + med_other,data=dat_ana)
+summary(f)
+
+g <-lm(formula = QTc_B ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind + med_other,data=dat_ana)
+summary(g)
+
+```
+
+```{r}
+check_assumptions(a)
+check_assumptions(b)
+check_assumptions(c)
+check_assumptions(d)
+check_assumptions(e)
+check_assumptions(f)
+check_assumptions(g)
+```
+
+## Linear Regression QT interval corrected with Framingham 
+### Complete dataset
+```{r framingham dat comp}
+
+dat_ana <- dat
+a <-lm(formula = QTc_F ~ variant +age+ sex+ age*sex + c(age*age) ,data=dat_ana)
+summary(a)
+
+b <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat_ana)
+summary(b)
+
+c <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi ,data=dat_ana)
+summary(c)
+
+d <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + fit_ind,data=dat_ana)
+summary(d)
+
+e <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind,data=dat_ana)
+summary(e)
+
+f <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + med_other,data=dat_ana)
+summary(f)
+
+g <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind  + med_other,data=dat_ana)
+summary(g)
+
+```
+```{r}
+check_assumptions(a)
+check_assumptions(b)
+check_assumptions(c)
+check_assumptions(d)
+check_assumptions(e)
+check_assumptions(f)
+check_assumptions(g)
+```
+
+
+### Reduced to individuals with a heart rate in the normal range
+```{r framingham dat red}
+
+dat_ana <- dat2
+a <-lm(formula = QTc_F ~ variant +age+ sex+ age*sex + c(age*age) ,data=dat_ana)
+summary(a)
+
+b <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat_ana)
+summary(b)
+
+c <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi ,data=dat_ana)
+summary(c)
+
+d <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + fit_ind,data=dat_ana)
+summary(d)
+
+e <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind,data=dat_ana)
+summary(e)
+
+f <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + med_other,data=dat_ana)
+summary(f)
+
+g <-lm(formula = QTc_F ~  variant + age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind + med_other,data=dat_ana)
+summary(g)
+
+```
+
+```{r}
+check_assumptions(a)
+check_assumptions(b)
+check_assumptions(c)
+check_assumptions(d)
+check_assumptions(e)
+check_assumptions(f)
+check_assumptions(g)
+```
+
+### Linear regression for every covariate individually
+```{r bazett single}
+
+m <-lm(formula = QTc_B ~ variant ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~  age ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~  sex ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ as.numeric(fit_ind),data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ bmi ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~  ca ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ tsh ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ diast_bp ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ syst_bp ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ ill_resp ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ ill_heart,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ ill_arrythmia ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ med_psych  ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ med_presc ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ med_other ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ c1 ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ c2 ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ c3 ,data=dat2)
+summary(m)
+check_assumptions(m)
+
+m <-lm(formula = QTc_B ~ c4 ,data=dat2)
+summary(m)
+check_assumptions(m)
+```
+
+# Excursion other ECG timings
+## T-Test ECG Timings
+```{r}
+# Test for normally 
+shapiro.test(dat$heart_rate)
+# Test for equal variance
+fligner.test(heart_rate ~ variant, dat)
+# Welch Two Sample t-test
+t.test(heart_rate ~ variant, data = dat, detailed = true)
+cohen.d(heart_rate ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$heart_rate,method =  "spearman")
+
+
+# Test for normally 
+shapiro.test(dat$p_duration)
+# Test for equal variance
+fligner.test(p_duration ~ variant, dat)
+# Welch Two Sample t-test
+t.test(p_duration ~ variant, data = dat, detailed = true)
+cohen.d(p_duration ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$p_duration,method =  "spearman")
+
+# Test for normally 
+shapiro.test(dat$champers_pq)
+# Test for equal variance
+fligner.test(champers_pq ~ variant, dat)
+# Welch Two Sample t-test
+t.test(champers_pq ~ variant, data = dat, detailed = true)
+cohen.d(champers_pq ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$champers_pq,method =  "spearman")
+
+
+# Test for normally 
+shapiro.test(dat$Q_duration_V3)
+# Test for equal variance
+fligner.test(Q_duration_V3 ~ variant, dat)
+# Welch Two Sample t-test
+t.test(Q_duration_V3 ~ variant, data = dat, detailed = true)
+cohen.d(Q_duration_V3 ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$Q_duration_V3,method =  "spearman")
+
+
+# Test for normally 
+shapiro.test(dat$R_duration_V3)
+# Test for equal variance
+fligner.test(R_duration_V3 ~ variant, dat)
+# Welch Two Sample t-test
+t.test(R_duration_V3 ~ variant, data = dat, detailed = true)
+cohen.d(R_duration_V3 ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$R_duration_V3,method =  "spearman")
+
+
+# Test for normally 
+shapiro.test(dat$S_duration_V3)
+# Test for equal variance
+fligner.test(S_duration_V3 ~ variant, dat)
+# Welch Two Sample t-test
+t.test(S_duration_V3 ~ variant, data = dat, detailed = true)
+cohen.d(S_duration_V3 ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$S_duration_V3,method =  "spearman")
+
+
+# Test for normally 
+shapiro.test(dat$qrs_duration)
+# Test for equal variance
+fligner.test(qrs_duration ~ variant, dat)
+# Welch Two Sample t-test
+t.test(qrs_duration ~ variant, data = dat, detailed = true)
+cohen.d(qrs_duration ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$qrs_duration,method =  "spearman")
+
+
+# Test for normally 
+shapiro.test(dat$T_duration_V3)
+# Test for equal variance
+fligner.test(T_duration_V3 ~ variant, dat)
+# Welch Two Sample t-test
+t.test(T_duration_V3 ~ variant, data = dat, detailed = true)
+cohen.d(T_duration_V3 ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$T_duration_V3,method =  "spearman")
+
+
+# Test for normally 
+shapiro.test(dat$rr)
+# Test for equal variance
+fligner.test(rr ~ variant, dat)
+# Welch Two Sample t-test
+t.test(rr ~ variant, data = dat, detailed = true)
+cohen.d(rr ~ variant, var.equal = FALSE, data = dat)
+cor.test ( as.numeric(dat$variant), dat$rr,method =  "spearman")
+
+```
+
+## Linear regression for individual ECG timings
+
+```{r other}
+
+b <-lm(formula = heart_rate ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = p_duration ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = champers_pq ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = Q_duration_V3 ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = R_duration_V3 ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = S_duration_V3 ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = qrs_duration ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = T_duration_V3 ~ variant+ age+ bmi + sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = rr ~ variant+ age+ bmi + sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat)
+summary(b)
+check_assumptions(b)
+```
+
+
+```{r other}
+
+b <-lm(formula = heart_rate ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = p_duration ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = champers_pq ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = Q_duration_V3 ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = R_duration_V3 ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = S_duration_V3 ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = qrs_duration ~ variant+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = T_duration_V3 ~ variant+ age+ bmi + sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+
+b <-lm(formula = rr ~ variant+ age+ bmi + sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 ,data=dat2)
+summary(b)
+check_assumptions(b)
+```
+
+
+## Analyses regarding QT time in normal range
+```{r}
+summary(dat[variant == 0 & sex== "male" &  QTc_B > 450, variant])
+summary(dat[variant == 1& sex== "male" &  QTc_B > 450, variant])
+summary(dat[variant == 0&sex== "female" &  QTc_B > 460, variant])
+summary(dat[variant == 1&sex== "female" &  QTc_B > 460, variant])
+
+
+summary(dat[variant == 0 & sex== "male" &  QTc_F > 450, variant])
+summary(dat[variant == 1& sex== "male" &  QTc_F > 450, variant])
+summary(dat[variant == 0&sex== "female" &  QTc_F > 460, variant])
+summary(dat[variant == 1&sex== "female" &  QTc_F > 460, variant])
+
+
+summary(dat2[variant == 0 & sex== "male" &  QTc_B > 450, variant])
+summary(dat2[variant == 1& sex== "male" &  QTc_B > 450, variant])
+summary(dat2[variant == 0&sex== "female" &  QTc_B > 460, variant])
+summary(dat2[variant == 1&sex== "female" &  QTc_B > 460, variant])
+
+
+summary(dat2[variant == 0 & sex== "male" &  QTc_F > 450, variant])
+summary(dat2[variant == 1& sex== "male" &  QTc_F > 450, variant])
+summary(dat2[variant == 0&sex== "female" &  QTc_F > 460, variant])
+summary(dat2[variant == 1&sex== "female" &  QTc_F > 460, variant])
+```
+
+
+```{r}
+dat_all2 <- dat
+dat_all2$toohigh_B <- ifelse(dat_all2$sex == "female", dat_all2$QTc_B >460, dat_all2$QTc_B >450)
+dat_all2$toohigh_F <- ifelse(dat_all2$sex == "female", dat_all2$QTc_F >460, dat_all2$QTc_F >450)
+
+chisq <- chisq.test( dat_all4$toohigh_B,dat_all4$variant,correct = FALSE)
+chisq
+
+dat_all4 <- dat2
+dat_all4$toohigh_B <- ifelse(dat_all4$sex == "female", dat_all4$QTc_B >460, dat_all4$QTc_B >450)
+dat_all4$toohigh_F <- ifelse(dat_all4$sex == "female", dat_all4$QTc_F >460, dat_all4$QTc_F >450)
+
+chisq <- chisq.test( dat_all2$toohigh_B,dat_all2$variant,correct = FALSE)
+chisq
+
+```

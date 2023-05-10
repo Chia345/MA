@@ -1,0 +1,50 @@
+H2000 cohort column name;Code name;Descriptions
+RELEASE_ID;RELEASE_ID;
+;variant;0= wild-type, 1=heterozygous
+IKA2;age;Age
+SP2;sex;Sex
+BIOI30;fit_ind;Fitness index (score)
+BIOI32;bmi;BMI, body mass index (kg/m2)
+P_Ca;ca;Calcium
+P_TSH;tsh;Thyrotropin
+MIT1_DIASTBP1 ;diast_BP;Diastolic blood pressure 1st measurement
+MIT1_DIASTBP2;;Diastolic blood pressure 2nd measurement
+MIT1_SYSTBP1 ;syst_bp;Systolic blood pressure 1st measurement
+MIT1_SYSTBP2;;Systolic blood pressure 2nd measurement
+BA04;ill_resp;Illness: asthma
+ BA05;;Illness: COPD
+ BA06;;Illness: chronic bronchitis
+ BA07;;Illness: other respiratory disease 
+ BA08;ill_heart;Illness: coronary thrombosis
+ BA09;;Illness: angina pectoris
+ BA10;;Illness: cardiac insufficiency
+BA12;;Illness: other heart disease
+ BA11;ill_arrhythmia;Illness: cardiac arrhythmia
+ATC_B01A;med_heart/ med_arrhythmia;Preventive medications for thrombosis
+ ATC_C01A;;Cardiac glycosides
+ ATC_C01B;;Arrhythmia medications
+ ATC_C01D;;Nitrates
+ ATC_C03E;;Combination products of potassium-sparing and other diuretics
+ ATC_C07A;;Beta blockers
+ ATC_C07B;;Beta blockers and thiazides
+ ATC_C07F;;Beta blockers and other antihypertensives
+ ATC_C08;med_other;Calcium antagonists
+ ATC_N03A;;Epilepsy medication
+ ATC_N05A;;Psychosis medication
+ ATC_N05B;;Neurosis medication
+ ATC_N05C;;Sleeping pills
+ ATC_N06A;;Antidepressants
+ ATC_N06C;;Psychopharmacon's combination products
+ ATC_R03BB;;Anticholinergics
+ ATC_R06A;;Systemic antihistamines
+ ATC_S01E;;Glaucoma medication
+EKGD_EK_AIKA; chambers_pq;Chambers PQ-time, ms
+EKGD_ETEINEN_TAAJUUS; freq_atrium;Frequency, atrium, n/min
+EKGD_KAMMIO_TAAJUUS; freq_chamber;Frequency, chamber, n/min
+EKGD_KOMPL_LKM; nr_normal_qrs;Number of normal QRS complexes
+EKGD_P_KESTO; p_duration;P-wave duration, ms
+EKGD_QRS_KESTO; qrs_duration;QRS duration, ms
+EKGD_QTC_AIKA; bazett_corrected_qt_original;Corrected QT interval, ms
+EKGD_QT_AIKA;qt;QT interval, ms
+EKGD_RR_VALI;average_rr;Average RR interval, ms
+MIT1_HRATE; heart_rate;Pulse rate per minute

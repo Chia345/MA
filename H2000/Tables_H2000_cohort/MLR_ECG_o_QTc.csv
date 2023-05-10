@@ -1,0 +1,10 @@
+Dependent variable;Covarietes;Extracted explanatory variable;Estimate;Std. Error;t value;P(>|t|)
+Heart rate (bpm);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;-1.750e+00;1.658e+00;-1.055;0.29127
+Average P-wave duration (ms);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;2.959e+00;2.481e+00;1.193;0.233050
+Average PQ-wave duration (ms);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;1.122e+00;3.979e+00;0.282;0.777877
+Q-wave duration V3 (ms);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;-0.2298022;0.7693540;-0.299;0.76519
+R-wave duration V3 (ms);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;-1.5146662;1.6162030;-0.937;0.34873
+S-wave duration V3 (ms);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;0.997573;2.309754;0.432;0.665841
+Average QRS duration (ms);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;-1.963e+00;1.741e+00;-1.128;0.25951
+T-wave duration V3 (ms);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;-1.717225;3.793247;-0.453;0.65079
+Average RR interval (ms);genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype;23.06568;26.36669;0.875;0.381739

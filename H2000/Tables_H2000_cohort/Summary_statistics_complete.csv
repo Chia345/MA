@@ -1,0 +1,20 @@
+;Wild-type (n =  3847);Heterozygous (n =  37);Missing values
+Sex;;;
+-           Male;n = 1849;n = 21;
+-           Female;n = 1998;n = 16;
+Age;47.6 (12.2);48.5 (10.2);
+Calcium (mmol/l);2.4 (0.1);2.4 (0.1);
+TSH (mU/l);1.5 (0.8);1.6 (0.8);
+BMI (kg/m2);26.1 (4.0);26.8 (3.2);238
+Fitness index score;83.8 (4.9);84.9 (5.2);457
+Heart rate (bpm);67.9 (10.3);66.4 (9.4);
+Average P-wave duration (ms);103.2 (15.2);106.7 (17.9);
+Average PQ-wave duration (ms);158.8 (24.9);161.9 (19.9);
+Q-wave duration V3 (ms);0.6 (4.7);0.5 (2.3);
+R-wave duration V3 (ms);39.1 (10.0);37.7 (9.9);
+S-wave duration V3 (ms);45.1 (14.0);46.9 (11.6);
+Average QRS duration (ms);91.1 (11.6);89.9 (8.9);
+QT;408.0 (33.7);405.3 (36.4);
+Bazett corrected QTc;414.45 (16.2);406.95 (13.6);
+T-wave duration V3 (ms);196.0 (22.5);193.3 (19.6);
+Average RR interval (ms);963.9 (156.9);984.2 (152.0);

@@ -1,0 +1,511 @@
+---
+title: "Plots"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(ggplot2)
+library(wesanderson)
+#load("final/dat.Rda")
+
+```
+### Normal distribution plots and overviews
+
+```{r}
+
+theme_rbook <- function(base_size = 8, base_family = "", base_line_size = base_size/22, 
+                        base_rect_size = base_size/22) {         
+  theme( 
+    axis.title = element_text(size = 8, margin = margin(0,0, 20 ,0)),                               
+    axis.text.y = element_text(color = "black",size = 8, margin = margin(0,0, 0 ,0)),    
+    axis.text.x = element_text(color = "black",angle=45, hjust=1, size=8),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    plot.caption = element_text(size = 10, face = "italic"),  
+    plot.title = element_text(size = 10, 
+                                  hjust = 0.5, 
+                                   face = "bold", 
+                                 margin = margin(10,0,10,0)),
+    panel.background = element_rect(fill="white"),
+    panel.grid.major = element_line(colour = "grey", size = 0.2),
+    axis.line = element_line(size = 1, colour = "black"),
+    strip.background =element_rect(fill = "#cddcdd"),
+    panel.border = element_rect(colour = "black", fill=NA, size=0.2),
+    strip.text = element_text(colour = "black"),
+    legend.key=element_blank(),legend.margin=margin(0,0,0,3),
+    legend.box.spacing = unit(10, "pt"),
+    legend.position="right",
+    legend.background=element_blank(),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 6),
+    
+    
+  )
+}
+```
+
+
+```{r}
+wild = "#1A5276"
+het = "#eb8634"
+```
+
+```{r}
+#dat <- dat_excl
+dat <- dat_excl[heart_rate>= 60 & heart_rate <=100,]
+#data <- "comp"
+data <- "lim"
+
+```
+
+```{r}
+
+ggb <- ggplot(dat, aes(variant, fill = variant)) +
+  geom_bar( na.rm=TRUE, colour = "black") +
+  theme_rbook() +
+   theme(legend.position = "none")+
+  theme(plot.title = element_text(hjust = 0.5),axis.text = element_text(colour = "black")) +
+  labs(title="Participants",x="Genotype", y = "Count") +
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+ggb
+summary(dat)
+```
+
+# Corrected QT
+```{r Variant, fig.width=6, fig.height=6}
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =QTc_F, fill = sex)) + 
+    geom_boxplot(outlier.size=0.2, na.rm=TRUE)+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Corrected QT interval (ms)", title ="Framingham corrected QT interval")  + 
+  theme(legend.position = "right")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c(wild,het), labels =c( "male" = "Male", "female" ="Female"),name = "Sex")
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_framinghamsex.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =QTc_F, fill = variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE)+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Corrected QT interval (ms)", title ="Framingham corrected QT interval")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_framingham.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =QTc_B,  fill =sex)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Corrected QT interval (ms)", title ="Bazett corrected QT interval")  + 
+  theme(legend.position = "right")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c(wild,het), labels =c( "male" = "Male", "female" ="Female"),name = "Sex")
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_bazettsex.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =QTc_B,  fill =variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Corrected QT interval (ms)", title ="Bazett corrected QT interval")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c(wild,het), labels =c( "male" = "Male", "female" ="Female"),name = "Sex")
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_bazett.png", sep = ""), height =3 , width = 3)
+```
+## Age
+
+```{r age, fig.width=3, fig.height=3}
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), 
+ybreaks = seq(0,300,20)
+bw = 1
+n_obs = sum(!is.na(dat$age))
+
+ggb <- ggplot(dat, aes(age)) +
+  geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = wild, fill = "white") +
+  theme_rbook() +
+  stat_function(fun = dnorm, args = list(mean = mean(dat$age), sd = sd(dat$age))) +
+  scale_y_continuous("Counts", breaks = round(ybreaks / (bw * n_obs),3), labels = ybreaks) +
+  scale_x_continuous(breaks = seq(0, 100, 5)) +
+  labs(title="Age distribution",x="Age (Years)", y = "Count")
+ggb
+ggsave(paste("Plots/",data,"_age.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =age, fill =variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Age (years)", title ="Age comparison")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_ageboxpl.png", sep = ""), height =3 , width = 3)
+```
+# sex
+```{r sex, fig.width=3, fig.height=3}
+
+ggb <- ggplot(dat, aes(sex, fill = variant)) +
+  geom_bar( na.rm=TRUE, colour = "black",position = "dodge") +
+  theme_rbook() +
+ 
+  labs(title="Sex Distribution",x="Sex", y = "Count", fill =  c(wild, het)) +
+  #scale_fill_manual(values=c("0"=wild,"1"=het)) +
+  scale_fill_manual(values=c("0"=wild,"1"=het),name = "Genotype", labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_x_discrete(labels=c("male" = "Male", "female" = "Female")) 
+  #scale_color_manual(values = c(wild, het))
+ggb
+ggsave(paste("Plots/",data,"_sex.png", sep = ""), height =3 , width = 3)
+
+
+```
+
+```{r fitness, fig.width=3, fig.height=3}
+
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), 
+ybreaks = seq(0,500,50)
+bw = 0.5
+n_obs = sum(!is.na(dat$fit_ind))
+
+ggb <- ggplot(dat, aes(fit_ind)) +
+  geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = wild, fill = "white") +
+  theme_rbook() +
+  
+  stat_function(fun = dnorm, args = list(mean = mean(dat$fit_ind, na.rm=TRUE), sd = sd(dat$fit_ind, na.rm=TRUE))) +
+  scale_y_continuous("Counts", breaks = round(ybreaks / (bw * n_obs),3), labels = ybreaks) +
+  scale_x_continuous(breaks = seq(0, 1000, 10)) +
+  
+  labs(title="Fitness index distribution",x="Fitness index", y = "Count")
+ggb
+ggsave(paste("Plots/",data,"_fitness.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =fit_ind, fill =variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Fitness index", title ="Fitness comparison")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_fitnessboxpl.png", sep = ""), height =3 , width = 3)
+```
+
+```{r bmi, fig.width=3, fig.height=3}
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), 
+ybreaks = seq(0,1000,20)
+bw = 0.5
+n_obs = sum(!is.na(dat$bmi))
+
+ggb <- ggplot(dat, aes(bmi)) +
+  geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = wild, fill = "white") +
+  theme_rbook() +
+  stat_function(fun = dnorm, args = list(mean = mean(dat$bmi, na.rm=TRUE), sd = sd(dat$bmi, na.rm=TRUE))) +
+  scale_y_continuous("Counts", breaks = round(ybreaks / (bw * n_obs),3), labels = ybreaks) +
+  scale_x_continuous(breaks = seq(0, 100, 2)) +
+  labs(title="BMI distribution ",x="Body Mass Index", y = "Count")
+ggb
+ggsave(paste("Plots/",data,"_bmi.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =bmi, fill =variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "BMI", title ="BMI comparison")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_bmiboxpl.png", sep = ""), height =3 , width = 3)
+```
+
+
+```{r ca, fig.width=3, fig.height=3}
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), breaks = round(ybreaks / (bw * n_obs),3), 
+ybreaks = seq(50,5000,500)
+bw = 0.05
+n_obs = sum(!is.na(dat$ca))
+
+
+ggb <- ggplot(dat, aes(ca)) +
+  geom_histogram(aes(y = ..density..), binwidth = bw/5, na.rm=TRUE, colour = wild, fill = "white") +theme_bw() +
+  theme_rbook() +
+  stat_function(fun = dnorm, args = list(mean = mean(dat$ca, na.rm=TRUE), sd = sd(dat$ca, na.rm=TRUE))) +
+  scale_y_continuous("Counts", breaks = ybreaks / (bw * n_obs), labels = ybreaks) +
+  scale_x_continuous(breaks = seq(0, 3, 0.1)) +
+  labs(title="Calcium distribution",x="Calcium concentration (mmol/l)", y = "Count")
+ggb
+ggsave(paste("Plots/",data,"_ca.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =ca, fill =variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Calcium concentration (mmol/l)", title ="Calcium concentration comparison")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_caboxpl.png", sep = ""), height =3 , width = 3)
+```
+
+
+```{r tsh, fig.width=3, fig.height=3}
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), breaks = round(ybreaks / (bw * n_obs),3), 
+ybreaks = seq(0,2000,20)
+bw = 0.1
+n_obs = sum(!is.na(dat$tsh))
+
+
+ggb <- ggplot(dat, aes(tsh)) +
+  geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = wild, fill = "white") +theme_bw() +
+  theme_rbook() +
+  stat_function(fun = dnorm, args = list(mean = mean(dat$tsh, na.rm=TRUE), sd = sd(dat$tsh, na.rm=TRUE))) +
+  scale_y_continuous("Counts", breaks = ybreaks / (bw * n_obs), labels = ybreaks) +
+  scale_x_continuous(breaks = seq(0, 5, 1)) +
+  labs(title="TSH distribution",x="TSH concentration (mU/I)", y = "Count")
+ggb
+ggsave(paste("Plots/",data,"_tsh.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = variant, y =tsh, fill =variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "TSH concentration (mu/I)", title ="TSH concentration comparison")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_tshboxpl.png", sep = ""), height =3 , width = 3)
+```
+
+
+
+```{r diast and syst, fig.width=8, fig.height=3}
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), breaks = round(ybreaks / (bw * n_obs),3), 
+ybreaks = seq(0,5000,20)
+bw = 1
+n_obs = sum(!is.na(dat$diast_bp))
+
+ggb <- ggplot(dat, aes(diast_bp)) +
+  geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = wild, fill = "white") +theme_bw() +
+  theme_rbook() +
+  stat_function(fun = dnorm, args = list(mean = mean(dat$diast_bp, na.rm=TRUE), sd = sd(dat$diast_bp, na.rm=TRUE))) +
+  scale_y_continuous("Counts", breaks = ybreaks / (bw * n_obs), labels = ybreaks) +
+  scale_x_continuous(breaks = seq(0, 200, 10)) +
+  labs(title="Diastolic blood pressure distribution",x=" Diastolic blood pressure (mm Hg)", y = "Count")
+ggb
+ggsave(paste("Plots/",data,"_bpdiast.png", sep = ""), height =3 , width = 3)
+
+ggb3 <- ggplot(data = dat, mapping = aes(x = variant, y =diast_bp, fill =variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Diastolic blood pressure (mm Hg)", title ="Diastolic blood pressure comparison")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb3
+ggsave(paste("Plots/",data,"_bpdiastboxpl.png", sep = ""), height =3 , width = 3)
+
+ybreaks = seq(0,5000,20)
+bw = 1
+n_obs = sum(!is.na(dat$syst_bp))
+ggb2 <- ggplot(dat, aes(syst_bp)) +
+  geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = wild, fill = "white") +theme_bw() +
+  theme_rbook() +
+  stat_function(fun = dnorm, args = list(mean = mean(dat$syst_bp, na.rm=TRUE), sd = sd(dat$syst_bp, na.rm=TRUE))) +
+  scale_y_continuous("Counts", breaks = ybreaks / (bw * n_obs), labels = ybreaks) +
+  scale_x_continuous(breaks = seq(0, 300, 10)) +
+  labs(title="Systolic blood pressure distribution",x=" Systolic blood pressure (mm Hg)", y = "Count")
+
+ggb2
+ggsave(paste("Plots/",data,"_bpsyst.png", sep = ""), height =3 , width = 3)
+
+ggb3 <- ggplot(data = dat, mapping = aes(x = variant, y =syst_bp, fill =variant)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Systolic blood pressure (mm Hg)", title ="Systolic blood pressure comparison")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb3
+ggsave(paste("Plots/",data,"_bpsystboxpl.png", sep = ""), height =3 , width = 3)
+
+library("gridExtra")
+grid.arrange(ggb, ggb2, ncol = 2, nrow = 1)
+#ggsave(paste("Plots/",data,"_bpblood.png", sep = ""), height = 8 , width = 12)
+```
+
+```{r illnesses, fig.width=12, fig.height=3}
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), breaks = round(ybreaks / (bw * n_obs),3), 
+
+ggb <- ggplot(dat, aes(ill_resp)) +
+  #geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = "#1A5276", fill = "white") 
+  theme_rbook() +
+  geom_bar( na.rm=TRUE, fill = wild)+
+  labs(title="Respiratory illnesses",x="Number of illnesses per participant", y = "Count")
+ggb
+ggsave(paste("Plots/",data,"_illresp.png", sep = ""), height =3 , width = 3)
+
+ggb2 <- ggplot(dat, aes(ill_heart)) +
+  geom_bar( na.rm=TRUE, fill = wild)+
+  theme_rbook() +
+  labs(title="Heart diseases",x="Number of illnesses per participant", y = "Count")
+ggb2
+
+ggsave(paste("Plots/",data,"_illheart.png", sep = ""), height =3 , width = 3)
+
+ggb3 <- ggplot(dat, aes(ill_arrythmia)) +
+  geom_bar( na.rm=TRUE,fill = wild) +
+  theme_rbook() +
+  labs(title="Arrythmia",x="Number of illnesses per participant", y = "Count")
+ggb3
+ggsave(paste("Plots/",data,"_illarrythmia.png", sep = ""), height =3 , width = 3)
+
+library("gridExtra")
+grid.arrange(ggb, ggb2, ggb3, ncol = 3, nrow = 1)
+ggsave(paste("Plots/",data,"_illness.png", sep = ""), height = 8 , width = 18)
+
+```
+
+
+```{r drugs, fig.width=12, fig.height=3}
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), breaks = round(ybreaks / (bw * n_obs),3), 
+
+ggb <- ggplot(dat, aes(med_psych)) +
+  #geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = "#1A5276", fill = "white") 
+  theme_rbook() +
+  geom_bar( na.rm=TRUE, fill = wild)+
+  labs(title="Psychological Drugs",x="Number of Medications per Participant", y = "Count")
+ggb
+ggsave(paste("Plots/",data,"_medpsych.png", sep = ""), height =3 , width = 3)
+
+ggb2 <- ggplot(dat, aes(med_presc)) +
+  geom_bar( na.rm=TRUE, fill = wild)+
+  theme_rbook() +
+  labs(title="Prescribed Medications",x="Number of Medications per Participant", y = "Count")
+ggb2
+ggsave(paste("Plots/",data,"_medpresc.png", sep = ""), height =3 , width = 3)
+
+ggb3 <- ggplot(dat, aes(med_other)) +
+  geom_bar( na.rm=TRUE, fill = wild)+
+  theme_rbook() +
+  labs(title="Sum of Medications",x="Number of Medications per Participant", y = "Count") 
+ggb3
+ggsave(paste("Plots/",data,"_medother.png", sep = ""), height =3 , width = 3)
+
+
+library("gridExtra")
+grid.arrange(ggb, ggb2, ggb3, ncol = 3, nrow = 1)
+ggsave(paste("Plots/",data,"_meds.png", sep = ""), height = 3 , width = 8)
+
+```
+
+
+```{r sex, fig.width=6, fig.height=6}
+
+ggb <- ggplot(dat, aes(sex, age, fill = variant)) +
+  geom_boxplot(outlier.size=0.2, na.rm=TRUE, colour = "black") +
+  theme_rbook() +
+  labs(title="Sex-age relation",x="Sex", y = "Age (years)") +
+  scale_fill_manual(values=c("0"=wild,"1"=het),name = "Genotype", labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_x_discrete(labels=c("male" = "Male", "female" = "Female")) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10))
+ggb
+ggsave(paste("Plots/",data,"_sexage.png", sep = ""), height = 3 , width = 3)
+```
+
+```{r}
+ggb <- ggplot(data = dat, mapping = aes(x = heart_rate,y = QTc_B)) + 
+  geom_point( na.rm=TRUE, size = 0.1, colour  = wild)+
+ stat_smooth(geom = "smooth", size = 0.2, color = het) +
+  theme_rbook() +
+  labs(x = "Heart rate", y= "QTc interval (ms)", title ="Relationship Heart Rate - QTcB")  + 
+  theme(legend.position = "none")+
+  ylim(300,600)+
+   scale_x_continuous(breaks = seq(40, 120, 10))
+  
+  #scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_heartqtcb.png", sep = ""), height =3 , width = 3)
+
+ggb <- ggplot(data = dat, mapping = aes(x = heart_rate,y = QTc_F)) + 
+  geom_point( na.rm=TRUE, size = 0.1, colour  =het)+
+ 
+ geom_smooth(size =0.2, color = wild) +
+  theme_rbook() +
+  labs(x = "Heart rate", y= "QTc interval (ms)", title ="Relationship Heart Rate - QTcF")  + 
+  theme(legend.position = "none")+
+  ylim(300,600) +
+  scale_x_continuous(breaks = seq(40, 120, 10))
+  
+  #scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("Plots/",data,"_heartqtcf.png", sep = ""), height =3 , width = 3)
+#dat$QTc_F
+```
+```{r}
+summary(dat)
+```
+
+
+```{r}
+dat %>%
+  group_by(variant) %>%
+  table1(age, sex, ca, tsh, ill_resp, ill_heart, ill_arrythmia, champers_pq, freq_atrium, freq_chamber, p_duration, qrs_duration,QTc_B, QTc_F, heart_rate, average_rr)
+```
+
+```{r}
+ggb <- ggplot(dat, aes(variant, heart_rate, fill = variant)) +
+  geom_boxplot(outlier.size=0.2, na.rm=TRUE, colour = "black") +
+  theme_rbook() +
+  theme(legend.position = "none")+
+  labs(title="Heart rate",x="Genotype", y = "Heart rate (bpm)") +
+  scale_fill_manual(values=c("0"=wild,"1"=het),name = "Genotype") +
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_y_continuous(breaks = seq(0, 140, by = 10))
+
+ggb
+
+ggsave(paste("Plots/",data,"_heartrate.png", sep = ""), height =3 , width = 3)
+```
+
+```{r}
+p2 <- ggplot(dat, aes(x=QTc_B, y=QTc_F))+
+  geom_point(size=0.2, color = wild) +
+  geom_abline(intercept = 0, slope = 1, colour ="black") +
+  theme_rbook() +
+  theme(legend.position = "none")+
+  labs(title="Relation between Bazett and Framingham QTc",x="Bazett QTc interval (ms)", y = "Framingham QTc interval (ms)") +
+  scale_fill_manual(values=c("0"=wild,"1"=het),name = "Genotype") +
+  scale_y_continuous(breaks = seq(0, 1000, by = 50)) +
+  scale_x_continuous(breaks = seq(0, 1000, by = 50)) 
+p2
+ggsave(paste("Plots/",data,"_QTccomparison.png", sep = ""), height =3 , width = 3)
+
+```
+### Family plots
+
+```{r}
+
+```
+```{r}
+summary(dat_inclST)
+```
+
+
+
+
+

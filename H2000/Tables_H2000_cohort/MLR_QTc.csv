@@ -1,0 +1,29 @@
+Dataset;Dependent variable;Extracted explanatory variable;Extracted row;Estimate;Std. Error;t value;P(>|t|)
+all heart rates;QTcB; genotype+ age+ sex+ age*sex + age*age;genotype ;-7.491869;2.577045;-2.907;0.003668
+all heart rates;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype ;-7.838e+00;2.551e+00;-3.073;0.00213
+all heart rates;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi;genotype ;-7.164e+00;2.683e+00;-2.670;0.007612
+all heart rates;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + fit_ind;genotype ;-7.368763;2.741917;-2.687;0.007235
+all heart rates;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4+ bmi + fit_ind;genotype ;-7.326962;2.737884;-2.676;0.007483
+all heart rates;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + med_psych + med_presc + med_other;genotype ;-7.821e+00;2.550e+00;-3.068;0.00217
+all heart rates;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind + med_other;genotype ;-7.360976;2.737660;-2.689;0.007206
+all heart rates;QTcF; age+ sex+ age*sex + age*age;genotype ;-6.006253;2.633925;-2.280;0.02264
+all heart rates;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype ;-5.825090;2.635522;-2.210;0.027148
+all heart rates;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi;genotype ;-5.283763;2.778092;-1.902;0.057258
+all heart rates;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + fit_ind;genotype ;-5.835276;2.830861;-2.061;0.03935
+all heart rates;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4+ bmi + fit_ind;genotype ;-5.814958;2.830285;-2.055;0.039999
+all heart rates;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + med_psych + med_presc + med_other;genotype ;-5.813261;2.635261;-2.206;0.027446
+all heart rates;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind + med_psych + med_presc + med_other;genotype ;-5.843797;2.830303;-2.065;0.039025
+heart rate 60 -100;QTcB; age+ sex+ age*sex + age*age;genotype ;-8.593494;2.872867;-2.991;0.002800
+heart rate 60 -101;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype ;-9.531560;2.838988;-3.357;0.000796
+heart rate 60 -102;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi;genotype ;-8.540661;2.919201;-2.926;0.003463
+heart rate 60 -103;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + fit_ind;genotype ;-9.044532;3.002970;-3.012;0.00262
+heart rate 60 -104;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4+ bmi + fit_ind;genotype ;-8.909221;2.997484;-2.972;0.002982
+heart rate 60 -105;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + med_psych + med_presc + med_other;genotype ;-9.492296;2.838290;-3.344;0.000834
+heart rate 60 -106;QTcB;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind + med_psych + med_presc + med_other;genotype ;-8.909027;2.997490;-2.972;0.002982
+heart rate 60 -107;QTcF; age+ sex+ age*sex + age*age;genotype ;-7.845245;2.670095;-2.938;0.003325
+heart rate 60 -108;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4;genotype ;-8.060245;2.674903;-3.013;0.00260
+heart rate 60 -109;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi;genotype ;-6.888754;2.745410;-2.509;0.012154
+heart rate 60 -110;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + fit_ind;genotype ;-7.722438;2.816740;-2.742;0.006153
+heart rate 60 -111;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4+ bmi + fit_ind;genotype ;-7.651740;2.815662;-2.718;0.006617
+heart rate 60 -112;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + med_psych + med_presc + med_other;genotype ;-8.028880;2.674575;-3.002;0.002704
+heart rate 60 -113;QTcF;genotype+ age+ sex+ age*sex + c(age*age) + ca +tsh+ diast_bp +syst_bp+ ill_resp +ill_heart +ill_arrythmia  +c1 +c2+c3+c4 + bmi + fit_ind + med_psych + med_presc + med_other;genotype ;-7.651535;2.815540;-2.718;0.006616

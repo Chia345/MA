@@ -1,0 +1,349 @@
+---
+title: "Data_Transformation"
+output:
+  word_document: default
+  pdf_document: default
+---
+# Adding additional columns and subsetting regarding certain columns
+
+This file includes all general data transformations for the dataset T00. It includes general subsetting, variable renaming, grouping of variables with creating new variables. It is structured in different categories and the columns get added to a final dataset for statistical methods. 
+
+## Set up 
+```{r setup}
+library(data.table)
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(plyr) 
+library(dplyr)
+library(furniture)
+library(purrr)      ## map()
+      ## join_all()
+library(dplyr)      ## %>% and a bunch of other stuff
+library(foreign)    ## read.xport()
+#knitr::opts_chunk$set(eval = FALSE, include = FALSE)
+#knitr::opts_chunk$set(eval = FALSE, include = FALSE)
+
+knitr::opts_knit$set(root.dir = "/home/Maren.Krafft/R_docs/Working_files")
+load("dat00.Rda")
+load("principal_comp.Rda")
+dat_all <- setDT(dat00)
+names(dat_all)[names(dat_all) == 'Variant'] <- 'variant'
+#fwrite(dat_all[dat_all$variant ==1, ], "dat_excl.csv")
+```
+
+# categories overview 
+- General
+- Blood Pressure
+- Illnesses
+- Medications & Sodium Channel Blockers
+- Family history
+- ECG
+
+# Covariates
+## General
+Subsetting the dataset to get the columns.
+```{r general}
+
+dat_gen<- dat_all[,c(1, 840, 21, 28, 80, 81, 830, 833)]
+```
+
+### Renaming and Transforming
+```{r general_renaming}
+
+#Renaming
+names(dat_gen)[names(dat_gen) == 'IKA2'] <- 'age'
+names(dat_gen)[names(dat_gen) == 'SP2'] <- 'sex'
+names(dat_gen)[names(dat_gen) == 'BIOI_V30'] <- 'fit_ind'
+names(dat_gen)[names(dat_gen) == 'BIOI_V32'] <- 'bmi'
+names(dat_gen)[names(dat_gen) == 'P_Ca'] <- 'ca'
+names(dat_gen)[names(dat_gen) == 'P_TSH'] <- 'tsh'
+```
+
+```{r general_transforming}
+dat_gen$tsh[dat_gen$tsh =="<0,01"] <- "0.009"
+dat_gen$tsh <- as.numeric(dat_gen$tsh)
+dat_gen$fit_ind <- as.numeric(dat_gen$fit_ind)
+dat_gen$variant <- as.factor(dat_gen$variant)
+dat_gen$sex <- as.factor(dat_gen$sex)
+levels(dat_gen$sex) <- c("male", "female") 
+summary(dat_gen)
+```
+
+
+## Blood Pressure
+
+```{r bloodpressure_mean}
+dat_bloodp<- dat_all[,c(1, 840, 817, 818, 822, 823)]
+
+dat_bloodp$diast_bp <- rowMeans(dat_bloodp[,c('MIT1_DIASTBP1', 'MIT1_DIASTBP2')], na.rm=TRUE)
+dat_bloodp$syst_bp <- rowMeans(dat_bloodp[,c('MIT1_SYSTBP1', 'MIT1_SYSTBP2')], na.rm=TRUE)
+
+dat_blood2 <- dat_bloodp[,c(1,7,8)]
+```
+
+## Illnesses
+Idea: 3 types
+respiratory, heart, arrhythmia
+
+=> Problem: NA will be recognized as 0 in a sum, but if double NA then also 0.... 
+```{r illnesses}
+
+dat_illness<- dat_all[,c(1, 62, 63, 64, 65, 66, 67, 68, 69, 73, 840)]
+summary(dat_illness)
+```
+
+
+### Disease score combination 
+
+```{r ill_arrythmia}
+
+#Respiratory
+dat_illness$ill_resp <- rowSums(dat_illness[,.(BA04, BA05, BA06, BA07)], na.rm=TRUE)
+
+# Heart
+dat_illness$ill_heart <- rowSums(dat_illness[,.(BA08, BA09, BA10, BA12)], na.rm=TRUE)
+
+# Arrythmia
+dat_illness$ill_arrythmia <- rowSums(dat_illness[,.(BA11)], na.rm=TRUE)
+
+dat_illness %>%
+  group_by(variant) %>%
+  table1(ill_resp, ill_heart, ill_arrythmia)
+
+dat_illness_final <- dat_illness[,c(1,12:14)]
+
+#summary(dat_illness_final)
+```
+
+
+## Medication
+=> 1 person with the variant uses arrythmia medication
+Problem: if all NA then it will be counted as 0... 
+
+
+,4,6
+
+```{r medication}
+
+dat_med<- dat_all[,c(1, 840, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 829, 834)]
+dat_med$med_other <- rowSums(dat_med[,c(12:20)], na.rm=TRUE)
+dat_med$med_heart <- rowSums(dat_med[,c(3:11)], na.rm=TRUE)
+dat_med$med_arrythmia <- dat_med[,5]
+names(dat_med)[names(dat_med) == 'psyykenlaakkeidenmaara'] <- 'med_psych'
+names(dat_med)[names(dat_med) == 'reseptilaakkeidenmaara'] <- 'med_presc'
+dat_med <- dat_med[, c(1,21,22,23,24,25)]
+summary(dat_med)
+```
+
+## Sodium Channel Blockers
+=> no sodium blocker atcs detected
+```{r sodium_atc}
+
+dat_sodiumatc<- dat_all[,c(1, 840, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128, 130, 132, 134)]
+atcs <- c("C01EB18","N03AB02"," N03AB04"," N03AB05"," N03AB54","C01BA03","C01BB01"," C05AD01"," D04AB01"," N01BB02"," R02AD02"," S01HA07"," S02DA01"," N01BB52","C03DB02","N03AX09","C03DB01","N03AF02","C01BA13"," C01BA01"," C01BA51"," C01BA71","C01BA02","C01BB03","C01BD01","C01BC03","C01BC04","C01BC08","C01BA05"," C01BA08","C01BB04","N03AF04","N03AF01","N03AB01","N03AB05","N03AF03","N03AX18")
+
+dat_sodiumatc[grepl(atcs, dat_sodiumatc[,c(3:18)]),]
+
+dat_sodium<- dat_all[,c(1, 840, 103, 105, 107, 109, 111, 113, 115, 117, 119, 121, 123, 125, 127, 129, 131, 133)]
+drugs <- c("Ranolazine","Phenytoin","Disopyramide","Lidocaine","Mexiletine","Triamterene","Lamotrigine","Amiloride","Moricizine","Oxcarbazepine","Quinidine","Procainamide","Tocainide","Amiodarone","Propafenone","Flecainide","Encainide","Ajmaline","Aprindine","Tetrodotoxin","Eslicarbazepine acetate","Pilsicainide","Eslicarbazepine","carbamazepine","Ethotoin","Fosphenytoin","Rufinamide","Lacosamide")
+
+dat_sodiumatc[!grepl(drugs, dat_sodium[,c(3:18)]),]
+
+```
+
+# Response Variables
+
+## ECG variables
+```{r ecg_variables}
+dat_ecg <- dat_all[,c(1, 176, 177, 179, 180, 226, 294,  308, 309, 358, 821)]
+colnames(dat_ecg) <-c("RELEASE_ID", "champers_pq", "freq_atrium", "freq_chamber", " nr_normal_qrs", "p_duration", "qrs_duration", "QTc_B", "qt","average_rr", "heart_rate")
+```
+
+
+```{r ecg_variables}
+#dat_ecg <- dat_ecg[!is.na(dat_ecg$heart_rate)]
+dat_ecg <- dat_ecg[!is.na(dat_ecg$qt)]
+
+# calculate rr
+dat_ecg$calc_rr <- 1000*((dat_ecg$qt/1000)/(dat_ecg$QTc_B/1000))^2
+dat_ecg$rr <- dat_ecg$average_rr*2
+
+# calculate Corrected qt
+dat_ecg$QTc_F <- dat_ecg$qt + 154*(1 - (dat_ecg$rr)/1000)
+
+```
+
+
+```{r vorlage}
+dat_ST <- dat_all[,c(1, 327, 385, 553, 638)]
+colnames(dat_ST) <-c("RELEASE_ID", "Q_duration_V3", "R_duration_V3", "S_duration_V3", "T_duration_V3")
+```
+### Merged
+```{r mergedfristtwo}
+
+dat_merged <- merge(dat_gen, dat_blood2, by = "RELEASE_ID")
+dat_merged <- merge(dat_merged, dat_illness_final, by = "RELEASE_ID")
+dat_merged <- merge(dat_merged, dat_med, by = "RELEASE_ID")
+dat_merged <- merge(dat_merged, dat_ecg, by = "RELEASE_ID")
+dat_merged <- merge(dat_merged, dat_ST, by = "RELEASE_ID")
+
+dat_complete <- merge(dat_merged, principal_comp[,c(1,6,7,8,9)], by = "RELEASE_ID")
+names(dat_complete)[names(dat_complete) == 'C1'] <- 'c1'
+names(dat_complete)[names(dat_complete) == 'C2'] <- 'c2'
+names(dat_complete)[names(dat_complete) == 'C3'] <- 'c3'
+names(dat_complete)[names(dat_complete) == 'C4'] <- 'c4'
+save(dat_complete, file = "dat_complete.Rda")
+summary(dat_complete)
+
+save(dat_complete, file ="final/dat_complete.Rda")
+write.csv(dat_complete, "final/dat_complete.csv", row.names = FALSE)
+```
+
+
+
+# Exclusions
+
+```{r normalexcl}
+dat_excl <- dat_complete
+
+dat_complete[med_heart>0] %>%
+  group_by(variant) %>%
+  table1( ill_arrythmia, ill_heart)
+```
+### Age: 
+
+=> Excluding outliers older than 90 Age nicht ausschließen 
+
+```{r age excl}
+dat_excl <- dat_excl[age <= 90,]
+hist(dat_excl$age, xlab = "Age", main = paste("Histogram of", "Age"))
+```
+
+### Hypothyroidism
+- mild hypothyroidism = 4.5-10
+- hypothyroidism = > 10
+
+=> Excluding all participants with a tsh level over or equal 4.5. 
+
+```{r thyroidism excl}
+dat_excl <- dat_excl[tsh < 4.5,]
+hist(dat_excl$tsh, xlab = "TSH Concentration", main = paste("Histogram of", "TSH"))
+```
+
+### calcium 
+-normal  calcium levels 2.2 - 2.6 mmol/L
+```{r calcium excl}
+dat_excl <- dat_excl[dat_excl$ca <= 2.6,]
+hist(dat_excl$ca, xlab = "Calcium Concentration", main = paste("Histogram of", "Ca"))
+
+```
+
+### bmi
+- underweight < 18.5
+- healthy 18.5 and 24.9
+- overweight 25-29.9
+- obese 30-39.9
+- morbidly obese >40
+
+```{r bmi excl}
+dat_excl <- dat_excl[dat_excl$bmi < 40| is.na(dat_excl$bmi),]
+hist(dat_excl$bmi, xlab = "BMI", main = paste("Histogram of", "Body Mass Index"))
+```
+
+### Fitness 
+- what to do with edema? idea 1: edema = NA?
+- >96 excellent
+- 68 - 82 average
+- <54 poor 
+=> Excluding all participants with poor fitness (nothing will happen as already excluded)
+
+```{r fitness excl}
+#summary(dat_excl)
+dat_excl <-dat_excl[dat_excl$fit_ind >= 54 | is.na(dat_excl$fit_ind),]
+hist(dat_excl$fit_ind, xlab = "Fitness Index", main = paste("Histogram of", "Fitness Index"))
+```
+
+### Blood Pressure
+
+```{r pressure excl}
+
+# If higher than 180 then two people with the variant would be removed
+dat_excl <- dat_excl[dat_excl$syst_bp <= 180 ,]
+dat_excl <- dat_excl[dat_excl$diast_bp <= 120 ,]
+#summary(dat_excl)
+
+hist(dat_excl$diast_bp, xlab = "Diastolic Blood Pressure", main = paste("Histogram of", "Mean Diastolic Bloodpressure"))
+hist(dat_excl$syst_bp, xlab = "Systolic Blood Pressure", main = paste("Histogram of", "Mean Systolic Bloodpressure"))
+
+```
+
+
+###  Medications 
+
+```{r arrythmia excl}
+dat_excl <- dat_excl[med_arrythmia == 0 | is.na(med_arrythmia),]
+dat_excl <- dat_excl[med_heart == 0 | is.na(med_heart),]
+```
+
+
+### Correct
+```{r}
+summary(dat_excl)
+
+plot(dat_excl$calc_rr, dat_excl$average_rr*2, type="p", lwd=1)
+cor.test(dat_excl$calc_rr, dat_excl$average_rr*2)
+
+
+p2 <- ggplot(dat_excl, aes(x=average_rr*2, y=calc_rr))+
+  geom_point(size=0.5) +
+  geom_abline(intercept = 0, slope = 1, colour ="blue")
+p2
+
+#ggplot(dat_excl, aes(x = average_rr*2))  + geom_point( aes(y=bazett_corrected_qt_calculatedrr),colour= "blue") + geom_point( aes(y=QTc_B),colour= "yellow") 
+
+
+
+summary(dat_excl$calc_rr-dat_excl$average_rr*2)
+summary(dat_excl$bazett_corrected_qt_doublerr - dat_excl$QTc_B)
+summary(dat_excl$heart_rate)
+summary(dat_excl[heart_rate>=60 & heart_rate<=100])
+summary(dat_excl)
+```
+
+
+
+### Heart rate
+```{r}
+hist(dat_excl$heart_rate, xlab = "diast BP", main = paste("Histogram of", "Mean Diastolic Bloodpressure"))
+```
+
+hist(dat_excl$diast_bp, xlab = "diast BP", main = paste("Histogram of", "Mean Diastolic Bloodpressure"))
+
+WIRD BEARBEITET 24.1.2023
+```{r pressure excl}
+
+#dat_excl <- dat_excl[heart_rate <=100 | is.na(heart_rate),]
+#png("heartr.png")
+#hist(dat_excl$heart_rate, xlab = "Heart Rate", main = paste("Histogram of", "Heart Rate"))
+#dev.off()
+#dat_excl[1, c("qt", "Correctedqt","average_rr")]
+#png("average_rr.png")
+#hist(dat_excl$average_rr, xlab = "Average rr", main = paste("Histogram of", "Average rr"))
+#dev.off()
+#View(dat_excl)
+#hist(dat_excl$Correctedqt, xlab = "Average rr", main = paste("Histogram of", "Average rr"))
+
+```
+
+
+```{r saveexcl}
+
+dat_excl <- dat_excl[,-c("med_heart","med_arrythmia")]
+summary(dat_excl)
+#dat_sum <- summary(dat_excl[1,]) 
+#dat_sum
+#write.csv(dat_sum, file = 'overview.csv') 
+
+save(dat_excl, file = "final/dat_excl.Rda")
+write.csv(dat_clean, "final/dat_excl.csv", row.names = FALSE)
+```
+
