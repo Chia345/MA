@@ -1,0 +1,1057 @@
+---
+title: "PheWAS"
+output: html_document
+date: "2023-01-14"
+---
+
+## Reading in the genotypes
+```{r include=FALSE}
+library(data.table)
+library(R.utils)
+library(ggplot2)
+library(survminer)
+library(survival)
+#install.packages("devtools")
+#install.packages(c("dplyr","tidyr","ggplot2","MASS","meta","ggrepel","DT"))
+#devtools::install_github("PheWAS/PheWAS")
+library(PheWAS)
+library(tibble)
+library(stringr)
+library(data.table)
+library(plyr)
+library(tidyr)
+library(glue)
+library(dplyr)
+```
+
+### Exomedaten
+```{r exom, eval=FALSE, include=FALSE}
+d <- read.table("IDs.txt",header = TRUE, sep = "")
+d$X3.38613787.G.A_A <- as.factor(d$X3.38613787.G.A_A)
+d$X3.38613787.G.A_HET <- as.factor(d$X3.38613787.G.A_HET)
+d$SEX <- as.factor(d$SEX)
+genotype <- d[, c(5,3,2)]
+colnames(genotype) <- c("ID", "genotype", "sex")
+
+save(genotype,file="genotype_exom.Rda")
+summary(genotype)
+#summary(d)
+```
+### Imputation
+```{r microarray}
+dat <- read.table("Variant",header = TRUE, sep = "")
+colnames(dat) <- c("eid_old", "eid", "sex", "genotype")
+dat$sex <- as.factor(dat$sex)
+dat$genotype <- as.factor(dat$genotype)
+
+summary(dat)
+save(dat,file="genotype_micro.Rda")
+```
+### Genotypen vergleichen
+```{r compare_files, eval=FALSE, include=FALSE}
+dat[dat$eid_old == 1151210,]
+
+compare <- dat[dat$eid %in% genotype$ID,]
+merged <- merge(genotype, dat, by.x ="ID", by.y = "eid")
+a <- ifelse(merged$genotype.x==merged$genotype.y,0,1)
+subset(merged, merged$genotype.x != merged$genotype.y)
+
+d[d$IID == 1151210,]
+```
+
+# Column overview csv phenotype file
+```{r getalldata, echo=FALSE}
+data_overview <- fread("~/ukbiobank/ukbiobank_77717/original/phenotypes/ukb49791.csv", nrows = 2)
+```
+
+
+```{r}
+
+last_follow <- which( colnames(data_overview)=="191-0.0" )
+b <- grep("21003", colnames(data_overview))
+test <- c(1,  b)
+
+tested<- fread("~/ukbiobank/ukbiobank_77717/original/phenotypes/ukb49791.csv", select = test)
+last_assessment <-tested
+save(last_assessment,file="last_assessment.Rda")
+```
+### Get latest assessment age
+```{r}
+assess <- melt(last_assessment[1:502415,], id = "eid")
+assess <- assess[!is.na(assess$value), c(1,3)]
+assess <- setorder(assess, cols = "eid")   
+head(assess)
+
+latest_assessment <- aggregate(cbind(latest_followup_age = value) ~ eid, assess, max)
+save(latest_assessment,file="latest_assessment.Rda")
+```
+
+```{r}
+total_with_lastdiag <- merge(total_with_lastdiag, latest_assessment, by.x= "eid", by.y = "eid", all.x=TRUE )
+
+count(total_with_lastdiag$age < total_with_lastdiag$latest_followup_age)
+total_with_lastdiag$last_age <- ifelse(total_with_lastdiag$latest_followup_age > total_with_lastdiag$age | is.na(total_with_lastdiag$age), total_with_lastdiag$latest_followup_age, total_with_lastdiag$age)
+```
+
+
+### Get general information 
+```{r generalcolumns, echo=FALSE}
+#Columnes for ICD-Codes
+death_age <- grep("40007", colnames(data_overview))
+death_age <- death_age[1]
+birth_year <- which( colnames(data_overview)=="34-0.0" )
+sex  <- which(colnames(data_overview)=="31-0.0" )
+pc <- grep("22009", colnames(data_overview))
+pc <- pc[1:10]
+birth_month<- which( colnames(data_overview)=="52-0.0" )
+ethnic <- grep("22006", colnames(data_overview))
+
+general <- c(1, sex, birth_year, birth_month, death_age, pc, ethnic)
+
+general <- fread("~/ukbiobank/ukbiobank_77717/original/phenotypes/ukb49791.csv", select = general)
+
+total <- merge(dat, general, by = "eid")
+
+colnames(total) <- c("eid", "eid_old", "sex", "genotype", "sex_new", "birth_year", "birth_month" , "death_age_1", paste0("pc", 1:10), "white_british")
+
+total <- total[total$eid != 1410515 & total$eid != 3938173 ,]
+total <- data.table(total)
+total$birthdate <- paste(total$birth_year, ifelse(nchar(total$birth_month) ==2, total$birth_month, paste("0", total$birth_month, sep="")), "01", sep = "-")
+total <-total[,-21]
+save(total,file="total.Rda")
+
+```
+
+### Extract ICD COdes
+```{r}
+icd1 <- grep("41270", colnames(data_overview))
+icd1 <- c(1, icd1)
+
+icds <- fread("~/ukbiobank/ukbiobank_77717/original/phenotypes/ukb49791.csv", select = icd1)
+save(icds,file="icds.Rda")
+```
+
+### Melt the ICD-codes to bring it in the form eid -icd
+```{r}
+all_icd_1 <- melt(icds[1:100000,], id = "eid")
+all_icd_1 <- all_icd_1[!(is.na(all_icd_1$value) | all_icd_1$value==""), c(1,3)]
+all_icd_1 <- setorder(all_icd_1, cols = "eid")   
+
+all_icd_2 <- melt(icds[100001:200000,], id = "eid")
+all_icd_2 <- all_icd_2[!(is.na(all_icd_2$value) | all_icd_2$value==""), c(1,3)]
+all_icd_2 <- setorder(all_icd_2, cols = "eid")   
+
+all_icd_3 <- melt(icds[200001:300000,], id = "eid")
+all_icd_3 <- all_icd_3[!(is.na(all_icd_3$value) | all_icd_3$value==""), c(1,3)]
+all_icd_3 <- setorder(all_icd_3, cols = "eid")   
+
+all_icd_4 <- melt(icds[300001:400000,], id = "eid")
+all_icd_4 <- all_icd_4[!(is.na(all_icd_4$value) | all_icd_4$value==""), c(1,3)]
+all_icd_4 <- setorder(all_icd_4, cols = "eid")   
+
+all_icd_5 <- melt(icds[400001:502415,], id = "eid")
+all_icd_5 <- all_icd_5[!(is.na(all_icd_5$value)) & all_icd_5$value!="", c(1,3)]
+all_icd_5 <- setorder(all_icd_5, cols = "eid")   
+
+all_icds <- rbind(all_icd_1, all_icd_2, all_icd_3, all_icd_4, all_icd_5)
+#save(all_icds,file="all_icds.Rda")
+```
+
+### Extract diagnosis dates 
+```{r}
+dates <- grep("41280", colnames(data_overview))
+dates <- c(1, dates)
+
+diag_dates <- fread("~/ukbiobank/ukbiobank_77717/original/phenotypes/ukb49791.csv", select = dates)
+
+save(diag_dates,file="date_columns.Rda")
+```
+
+### Melt the dates to bring it in the form eid - date
+```{r}
+all_1 <- melt(diag_dates[1:100000,], id = "eid")
+all_1 <- all_1[!is.na(all_1$value), c(1,3)]
+all_1 <- setorder(all_1, cols = "eid")   
+
+all_2 <- melt(diag_dates[100001:200000,], id = "eid")
+all_2 <- all_2[!(is.na(all_2$value) ), c(1,3)]
+all_2 <- setorder(all_2, cols = "eid")   
+
+all_3 <- melt(diag_dates[200001:300000,], id = "eid")
+all_3 <- all_3[!(is.na(all_3$value) ), c(1,3)]
+all_3 <- setorder(all_3, cols = "eid")   
+
+all_4 <- melt(diag_dates[300001:400000,], id = "eid")
+all_4 <- all_4[!(is.na(all_4$value)), c(1,3)]
+all_4 <- setorder(all_4, cols = "eid")   
+
+all_5 <- melt(diag_dates[400001:502415,], id = "eid")
+all_5 <- all_5[!(is.na(all_5$value)), c(1,3)]
+all_5 <- setorder(all_5, cols = "eid")   
+
+all_dates <- rbind(all_1, all_2, all_3, all_4, all_5)
+save(all_dates,file="all_dates.Rda")
+#summary(all_dates)
+```
+
+### Get last diagnosis and add it to the total datatable 
+```{r}
+birthdate <- total[, c("eid", "birthdate")]
+dates_merged <- merge(all_dates, birthdate, by = "eid")
+
+dates_merged$diff_age <- as.numeric(difftime(as.Date(dates_merged$value), as.Date(dates_merged$birthdate), "days"))/365
+
+save(dates_merged,file="dates_merged.Rda")
+
+results <- aggregate(cbind(date_last_diag = diff_age) ~ eid, dates_merged, max)
+
+total <- merge(total, results, by = "eid",all = TRUE)
+
+save(total,file="total_with_lastdiag.Rda")
+```
+
+### Extracts Death Diagnoses
+```{r}
+death_diag <- grep("40001", colnames(data_overview))
+death_diag_sec <- grep("40002", colnames(data_overview))
+
+death <- c(1, death_diag, death_diag_sec)
+
+diag_death <- fread("~/ukbiobank/ukbiobank_77717/original/phenotypes/ukb49791.csv", select = death)
+
+#save(diag_death,file="diag_death.Rda")
+```
+
+### Melt the death diagnoses to bring it in the form eid - death diagnosis
+```{r}
+all_death_1 <- melt(diag_death[1:100000,], id = "eid")
+all_death_1 <- all_death_1[!(is.na(all_death_1$value) | all_death_1$value==""), c(1,3)]
+all_death_1 <- setorder(all_death_1, cols = "eid")   
+
+all_death_2 <- melt(diag_death[100001:200000,], id = "eid")
+all_death_2 <- all_death_2[!(is.na(all_death_2$value) | all_death_2$value==""), c(1,3)]
+all_death_2 <- setorder(all_death_2, cols = "eid")   
+
+all_death_3 <- melt(diag_death[200001:300000,], id = "eid")
+all_death_3 <- all_death_3[!(is.na(all_death_3$value) | all_death_3$value==""), c(1,3)]
+all_death_3 <- setorder(all_death_3, cols = "eid")   
+
+all_death_4 <- melt(diag_death[300001:400000,], id = "eid")
+all_death_4 <- all_death_4[!(is.na(all_death_4$value) | all_death_4$value==""), c(1,3)]
+all_death_4 <- setorder(all_death_4, cols = "eid")   
+
+all_death_5 <- melt(diag_death[400001:502415,], id = "eid")
+all_death_5 <- all_death_5[!(is.na(all_death_5$value)) & all_death_5$value!="", c(1,3)]
+all_death_5 <- setorder(all_death_5, cols = "eid")   
+#head(all_death_5)
+
+all_death_diag_death <- rbind(all_death_1, all_death_2, all_death_3, all_death_4, all_death_5)
+
+all_death_diag <- all_death_diag_death
+save(all_death_diag,file="all_death.Rda")
+```
+
+### Create reduced ICD-Code tabke
+```{r}
+all_icds_incldeath <- rbind(all_icds, all_death_diag)
+names(all_icds_incldeath)[names(all_icds_incldeath) == 'value'] <- 'icd'
+save(all_icds_incldeath,file="all_icds_incldeath.Rda")
+
+all_icd_red <- all_icds_incldeath
+all_icd_red$icd <-substring(all_icd_red$value,1,3)
+all_icd_red <- all_icd_red[,-2]
+
+all_icd_red <- all_icd_red[!duplicated(all_icd_red), ]
+save(all_icd_red, file="all_icd_red.Rda")
+```
+
+### Create final total dataset
+```{r}
+load("total_with_lastdiag.Rda")
+
+dat_total <- total
+names(dat_total)[names(dat_total) == 'death_age_1'] <- 'death_age'
+
+dat_total$has_death_diag <- ifelse(dat_total$eid %in% all_death_diag$eid, TRUE, FALSE)
+dat_total$age <- round(ifelse(is.na(dat_total$death_age), dat_total$date_last_diag, dat_total$death_age), 2)
+
+dat_total$age_sq <- dat_total$age^2
+
+dat_total$sex_age <- dat_total$age*as.numeric(dat_total$sex)
+
+dat_total <- dat_total[,-c(2,5,19)]
+
+save(dat_total,file="Phewas/total_complet.Rda")
+write.csv(dat_total, "Phewas/total_complete.csv", row.names = FALSE)
+
+dat_wNA <- dat_total
+dat_total<- dat_total[!is.na(dat_total$age)]
+
+save(dat_total,file="withoutAge/total_complete_woNa.Rda")
+write.csv(dat_total, "withoutAge/total_complete_woNA.csv", row.names = FALSE)
+```
+
+### Prepare ICD-Code and merge with general information file
+```{r}
+
+#load("withoutAge/total_complete.Rda")
+load("all_icds_incldeath.Rda")
+load("all_icd_red.Rda")
+
+# For reduced icd 
+I4<- all_icd_red %>% filter(str_detect(icd,"^I4"))
+I66<- all_icd_red %>% filter(str_detect(icd,"^I66"))
+I5<- all_icd_red %>% filter(str_detect(icd,"^I5"))
+
+Phenotypes<-rbind(I4, I66,I5)
+ICDs_red<- unique(Phenotypes$icd)
+save(ICDs_red,file="withoutAge/icds_red.Rda")
+
+total2 <- dat_total
+for (ICD in ICDs_red){
+  ICDlist<-unique(Phenotypes[icd==ICD]$eid)
+  total2[[ICD]]<-ifelse(total2$eid%in%ICDlist,TRUE,FALSE)
+}
+
+total_red <- total2
+save(total_red,file="withoutAge/total_red.Rda")
+
+#For detailed icd
+I4<- all_icds_incldeath %>% filter(str_detect(icd,"^I4"))
+I66<- all_icds_incldeath %>% filter(str_detect(icd,"^I66"))
+I5<- all_icds_incldeath %>% filter(str_detect(icd,"^I5"))
+
+Phenotypes<-rbind(I4, I66, I5)
+ICDs<- unique(Phenotypes$icd)
+save(ICDs,file="withoutAge/icds_all.Rda")
+
+total2 <- dat_total
+
+for (ICD in ICDs){
+  ICDlist<-unique(Phenotypes[icd==ICD]$eid)
+  total2[[ICD]]<-ifelse(total2$eid%in%ICDlist,TRUE,FALSE)
+}
+
+total_all <- total2
+save(total_all,file="withoutAge/total_all.Rda")
+```
+
+
+### Phewas
+```{r}
+sub <- c("eid", "sex", paste0("pc",1:10),"age", "age_sq", "sex_age")
+
+results_het_all=phewas_ext(data= total_all, phenotypes=ICDs,genotypes="genotype", covariates= sub[-1], additive.genotypes=T, cores=1) 
+save(results_het_all,file="withoutAge/phewas_het_all_new.Rda")
+write.csv(results_het_all,file="withoutAge/phewas_het_all_new.csv", row.names = FALSE)
+
+results_het_red=phewas_ext(data= total_red, phenotypes=ICDs_red,genotypes="genotype", covariates= sub[-1], additive.genotypes=T, cores=1)
+save(results_het_red,file="withoutAge/phewas_het_red_new.Rda")
+write.csv(results_het_red,file="withoutAge/phewas_het_red_new.csv", row.names = FALSE)
+```
+
+# Add ICD description
+```{r}
+ICD_names <- read.table("ICD_Names_comp",header = TRUE, sep = "\t")
+setorder(results_het_all, cols =  "phenotype")  
+setorder(results_het_red, cols =  "phenotype")  
+results_het_all <-merge(ICD_names,results_het_all,by="phenotype", all.y=TRUE)
+results_het_red <-merge(ICD_names,results_het_red,by="phenotype", all.y=TRUE)
+```
+
+# Sums frequency
+```{r}
+#sum <- read.csv("sumgen.csv")
+
+gen_1_icd_red <- total_red[total_red$genotype ==1, -c(1:22)]
+a <- colSums(gen_1_icd_red == TRUE)
+dt_red = data.table( icd = colnames(gen_1_icd_red), genTRUE = a)
+
+gen_1_icd_all <- total_all[total_all$genotype ==1, -c(1:22)]
+b <- colSums(gen_1_icd_all == TRUE)
+dt_all = data.table( icd = colnames(gen_1_icd_all), genTRUE = b)
+
+results_het_all <- merge( results_het_all,dt_all, by.x = "phenotype", by.y = "icd")
+
+results_het_red <- merge( results_het_red,dt_red, by.x = "phenotype", by.y = "icd")
+
+save(results_het_all,file="withoutAge/results_het_all_sum.Rda")
+write.csv(results_het_all,file="withoutAge/results_het_all_sum.csv", row.names = FALSE)
+
+save(results_het_red,file="withoutAge/results_het_red_sum.Rda")
+write.csv(results_het_red,file="withoutAge/results_het_red_sum.csv", row.names = FALSE)
+```
+
+### Round p-values and exclude I48 in specified ICD-Codes
+
+```{r}
+results_red <- data.table(results_het_red)
+results_all <- data.table(results_het_all)
+results_all <- results_all[phenotype != "I48",]
+
+results_red$p_short <-  round(results_red$p, 2)
+results_all$p_short <-  round(results_all$p, 2)
+results_red[results_red$phenotype == "I48","p_short"] <- round(results_red[results_red$phenotype == "I48",p],5)
+results_red[results_red$phenotype == "I40","p_short"] <- round(results_red[results_red$phenotype == "I40",p],3)
+
+
+results_all[phenotype == "I409","p_short"] <- round(results_all[phenotype == "I409",p],3)
+results_all[phenotype == "I441","p_short"] <- round(results_all[phenotype == "I441",p],3)
+results_all[phenotype == "I455","p_short"] <- round(results_all[phenotype == "I455",p],4)
+results_all[phenotype == "I480","p_short"] <- round(results_all[phenotype == "I480",p],3)
+
+
+save(results_all,file="withoutAge/results_all_phewas.Rda")
+save(results_red,file="withoutAge/results_red_phewas.Rda")
+write.csv(results_all, "withoutAge/results_all.csv", row.names = FALSE)
+write.csv(results_red, "withoutAge/results_red.csv", row.names = FALSE)
+```
+
+
+
+
+### Add Confidence interval 
+
+```{r}
+results_all$CIpos <- exp(results_all$beta+1.96*results_all$SE)
+results_all$CIneg <- exp(results_all$beta-1.96*results_all$SE)
+
+results_red$CIpos <- exp(results_red$beta+1.96*results_red$SE)
+results_red$CIneg <- exp(results_red$beta-1.96*results_red$SE)
+```
+
+```{r}
+results_all <- results_all[,-c(3,9,13:15,17:18)]
+results_red <- results_red[,-c(3,9,13:15,17:18) ]
+
+save(results_all,file="RDAs/results_all_phewas2.Rda")
+save(results_red,file="RDAs/results_red_phewas2.Rda")
+write.csv(results_all, "CSV/results_all2.csv", row.names = FALSE)
+write.csv(results_red, "CSV/results_red2.csv", row.names = FALSE)
+stri_sub(results_all$phenotype, 4, 3) <- "."
+#ab hier ausführen
+
+results_all <- results_all[genTRUE >= 4, ]
+results_red <- results_red[genTRUE >= 4, ]
+save(results_all,file="RDAs/results_all.Rda")
+save(results_red,file="RDAs/results_red.Rda")
+write.csv(results_all, "CSV/results_all.csv", row.names = FALSE)
+write.csv(results_red, "CSV/results_red.csv", row.names = FALSE)
+```
+
+```{r}
+
+p.adjust(results_red$p, method = "fdr")
+
+```
+
+### ggplot libraries
+```{r}
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(stringi)
+```
+
+### ggplot Theme
+```{r}
+
+theme_rbook <- function(base_size = 8, base_family = "", base_line_size = base_size/22, 
+                        base_rect_size = base_size/22) {         
+  theme( 
+    axis.title = element_text(size = 10, margin = margin(0,0, 20 ,0)),                               
+    axis.text.y = element_text(color = "black",size = 8, margin = margin(0,0, 0 ,0)),    
+    axis.text.x = element_text(color = "black",angle=45, hjust=1, size=8),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    plot.caption = element_text(size = 10, face = "italic"),  
+    plot.title = element_text(size = 10, 
+                                  hjust = 0.5, 
+                                   face = "bold", 
+                                 margin = margin(10,0,10,0)),
+    panel.background = element_rect(fill="white"),
+    panel.grid.major = element_line(colour = "grey", size = 0.2),
+    axis.line = element_line(size = 1, colour = "black"),
+    strip.background =element_rect(fill = "#cddcdd"),
+    panel.border = element_rect(colour = "black", fill=NA, size=0.2),
+    strip.text = element_text(colour = "black"),
+    legend.key=element_blank(),legend.margin=margin(0,0,0,3),
+    legend.box.spacing = unit(10, "pt"),
+    legend.position="right",
+    legend.background=element_blank(),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 6)
+    
+    
+    
+  )
+}
+```
+
+
+```{r}
+wild = "#1A5276"
+het = "#FF8300"
+```
+
+### Phewas Plots
+```{r}
+plot_icd_red<-ggplot(results_red, aes(x=paste(phenotype,"/ ",desc), y=OR,label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point( color = wild) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", color =wild) +
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(size = 2.5, nudge_x=.2, direction = "y") +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  theme(plot.margin = margin(0,0,0, 1.5, "cm"))+
+  ggtitle("Association between the genotype and ICD categories") +
+  theme(plot.margin = margin(0,0,0, 3, "cm"))
+plot_icd_red
+ggsave("PLOT/plot_icd_red_new2.pdf",width = 8, height = 8)
+ggsave("PLOT/plot_icd_red_new2_s.png",width = 10, height = 7)
+
+outliershape <- ifelse(results_all$OR<2,16,17)
+
+#results_all$icd_correct <- stri_sub(results_all$phenotype, 4, 3) <- "."
+plot_icd_all<-ggplot(results_all, aes(x=paste(phenotype,"/ ",desc), y=ifelse(OR<2,OR,2),label=p_short, 3))+
+  geom_hline(aes(yintercept= 1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(shape =outliershape, color =wild) +
+  geom_errorbar(aes(ymin=CIneg, ymax=ifelse(CIpos> 2.5, 2.5, CIpos)), width=0, alpha=0.7, stat = "identity", color = wild) +
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(size = 2.5, nudge_x=.3, direction = "y") +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Association between the genotype and ICD subcategories") +
+  theme(plot.margin = margin(0,0,0, 3, "cm"))
+ # scale_shape_manual(values = c(1, 4))
+plot_icd_all
+ggsave("PLOT/plot_icd_all_new2.pdf", height = 6 , width = 7)
+ggsave("PLOT/plot_icd_all_new2_s.png",width =  10, height = 6)
+```
+
+# Change color!!!
+```{r}
+library(survival)
+library(survminer)
+
+#load(all_death.Rda)
+I48<- all_death_diag %>% filter(str_detect(value,"^I48"))
+
+ICDs<- unique(I48$value)
+
+surv_all <- dat_total
+surv_all$sss <- surv_all$eid%in%I48$eid #Todesdiagnose
+survobj <- survfit(Surv(age, sss) ~ genotype, data = surv_all)
+
+out3 <- ggsurvplot(
+  survobj,
+  fun = "event",
+  censor = F, 
+  
+  ggtheme = theme_rbook(),
+  #theme(legend.position = "left"),
+  legend.title = "Genotype",
+  legend.labs = c("Wildtype", "Heterozygous"),
+  size = 0.4,
+  palette = c(wild, het),
+
+  grid = NULL,
+  conf.int = TRUE,
+
+ xlim = c(25, 85),
+  break.x.by= 5
+ #break.y.by= 0.01
+ ) +ylab("Probability to die from atrial fibrillation")+xlab("Age (years)") 
+
+out3
+ggsave("PLOT/Survival_death.pdf", height = 8 , width = 8)
+ggsave("PLOT/Survival_death.png", height = 4 , width = 4)
+```
+
+### Proportion without atrial fibrilation
+```{r}
+#load(date_columns.Rda)
+#load(.Rda)
+
+#Get IDs with atrial fibrillation and flutter
+I48<- all_icds_incldeath %>% filter(str_detect(icd,"^I48"))
+eids <- unique(I48$eid)
+
+#Get every individuals row that has this diagnosis
+diag_dates_I48 <- diag_dates[eid %in% eids,]
+diag_icds_I48 <- icds[eid %in% eids,]
+#summary(diag_dates_I48)
+
+#Change the structure
+diag_dates_melted <- melt(diag_dates_I48, id = "eid")
+diag_icds_melted <- melt(diag_icds_I48, id = "eid")
+
+#Merge dates and diagnosis
+diag_icd_combined <- cbind(diag_dates_melted, diag_icds_melted)
+diag_icd_combined <- diag_icd_combined[,-c(2,5)]
+colnames(diag_icd_combined) <- c("eid", "date","eid2", "icd")
+#save(diag_icd_combined, file="diag_icd_combined.Rda")
+
+
+
+I48_combined <- diag_icd_combined %>% filter(str_detect(icd,"^I48"))
+
+#save(I48_combined, file="I48_combined.Rda")
+
+
+birthdate <- dat_total[,c("eid", "birthdate")]
+
+dates_merged <- merge(I48_combined, birthdate, by = "eid", all.x = TRUE)
+
+dates_merged$diff_age <- round(as.numeric(difftime(as.Date(dates_merged$date), as.Date(dates_merged$birthdate), "days"))/365,2)
+
+results <- aggregate(cbind(first_diag_I48 = diff_age) ~ eid, dates_merged, min)
+
+
+I48_firstdiag <- results
+#save(I48_firstdiag, file="I48_firstdiag.Rda")
+
+
+#get death diags with I48
+death_diag_merged <- merge(all_death_diag, dat_total[,c("eid","death_age")], by = "eid", all.x = TRUE)
+I48_death <- death_diag_merged %>% filter(str_detect(value,"^I48"))
+I48_death <- I48_death[!is.na(I48_death$death_age),] #56 NAs
+colnames(I48_death) <-c("eid", "icd", "first_diag_I48")
+I48_firstdiag_incl_death <- rbind(I48_firstdiag, I48_death[,c(1,3)])
+
+I48_first <- aggregate(cbind(first_diag_I48 = first_diag_I48) ~ eid, I48_firstdiag_incl_death, min)
+save(I48_first, file="withoutAge/I48_first.Rda")
+
+```
+
+```{r}
+dat_total_I48 <- merge(dat_total, I48_first, by = "eid", all.x =TRUE)
+
+
+save(dat_total_I48, file="dat_total_I48_.Rda")
+
+
+```
+
+
+```{r}
+firstdiag <- ggplot(dat_total_I48, aes(x=genotype, y=first_diag_I48, fill=genotype)) + 
+  geom_violin(width = 0.4, lwd = 0.3) + 
+  geom_boxplot(outlier.size=0.2,width=0.2, color="black", alpha=0.2, lwd = 0.3) +
+  scale_fill_manual(values=c(wild, het)) +
+  theme_rbook() +
+  ylab("Age at first diagnosis of I48") +
+  
+   scale_x_discrete(name ="Genotype", labels=c("0" = "Wildtype", "1" = "Heterozygous"))+
+  labs( title ="Age comparison of first atrial fibrillation diagnosis")+
+  theme(legend.position = "none")
+firstdiag
+ggsave("PLOT/First_diagnosis_I48.pdf", height = 8 , width = 8)
+ggsave("PLOT/First_diagnosis_I48.png", height = 4 , width = 4)
+
+mean(dat_total_I48$first_diag_I48[dat_total_I48$genotype ==1], na.rm=TRUE)
+mean(dat_total_I48$first_diag_I48[dat_total_I48$genotype ==0], na.rm=TRUE)
+sd(dat_total_I48$first_diag_I48[dat_total_I48$genotype ==1], na.rm=TRUE)
+sd(dat_total_I48$first_diag_I48[dat_total_I48$genotype ==0], na.rm=TRUE)
+
+model <- lm(first_diag_I48 ~ genotype + sex + age + birth_year + age_sq + sex_age, data = dat_total_I48)
+summary(model)
+
+```
+Survplot Proportion without atrial fibrillation
+
+```{r}
+surv_all_1 <- data.table(dat_total_I48)
+surv_all_1[, rel_age := first_diag_I48]
+surv_all_1[, hasdiag := ifelse(is.na(first_diag_I48), F, T)]
+surv_all_1[is.na(rel_age), rel_age := age]
+survobj2 <- survfit(Surv(rel_age, hasdiag) ~ genotype, data = surv_all_1)
+
+out4 <- ggsurvplot(
+  survobj2,
+  #fun = "event",
+  censor = F, 
+  
+  ggtheme = theme_rbook(),
+  #theme(legend.position = "left"),
+  legend.title = "Genotype",
+  legend.labs = c("Wildtype", "Heterozygous"),
+  size = 0.4,
+  palette = c(wild, het),
+
+  grid = NULL,
+  conf.int = TRUE,
+ # Add risk table
+ xlim = c(25, 83),fontsize = 3,
+  break.x.by= 5,
+ legend = "none"
+# break.y.by= 0.01
+  
+) +ylab("Proportion without atrial fibrillation and flutter")+xlab("Age (years)") 
+out4
+ggsave("PLOT/Without_I48.pdf", height = 8 , width = 8)
+ggsave("PLOT/Without_I48.png", height = 4 , width = 4)
+```
+
+
+
+### Meta-Analysis
+
+```{r}
+phewas_finn2 <- read.table("phewas_finn_all.txt",header = TRUE, sep = ",")
+phewas_finn2 <- phewas_finn2[phewas_finn2$genotype != "hom",]
+ICD_names <- read.table("ICD_Names_comp",header = TRUE, sep = "\t")
+phewas_finn2 <-merge(ICD_names,phewas_finn2,by="phenotype", all.y=TRUE)
+
+save(phewas_finn2, file="RDAs/phewas_finn_before_cleaning.Rda")
+phewas_finn2 <- phewas_finn2[,-c(3,9,13:18,21)]
+
+phewas_finn2$Database <- "FinnGen"
+
+phewas_finn_all <- data.table(phewas_finn2[phewas_finn2$red == 0, ])
+phewas_finn_red <- data.table(phewas_finn2[phewas_finn2$red == 1, ])
+stri_sub(phewas_finn_all$phenotype, 4, 3) <- "."
+
+
+
+setorder(phewas_finn_all, cols = "phenotype")
+setorder(phewas_finn_red, cols = "phenotype")
+
+
+phewas_finn_red[, p_short:= ifelse(p > 0.05, round(p, 2),0)]
+
+phewas_finn_red[phenotype == "I42","p_short"] <- round(phewas_finn_red[phenotype == "I42",p],3)
+phewas_finn_red[phenotype == "I47","p_short"] <- round(phewas_finn_red[phenotype == "I47",p],7)
+phewas_finn_red[phenotype == "I48","p_short"] <- round(phewas_finn_red[phenotype == "I48",p],26)
+phewas_finn_red[phenotype == "I49","p_short"] <- round(phewas_finn_red[phenotype == "I49",p],5)
+phewas_finn_red[phenotype == "I50","p_short"] <- round(phewas_finn_red[phenotype == "I50",p],4)
+
+phewas_finn_all[, p_short:= ifelse(p > 0.05, round(p, 2),0)]
+
+phewas_finn_all[phenotype == "I44.1","p_short"] <- round(phewas_finn_all[phenotype == "I44.1",p],3)
+phewas_finn_all[phenotype == "I44.7","p_short"] <- round(phewas_finn_all[phenotype == "I44.7",p],3)
+phewas_finn_all[phenotype == "I47.1","p_short"] <- round(phewas_finn_all[phenotype == "I47.1",p],6)
+phewas_finn_all[phenotype == "I48.0","p_short"] <- round(phewas_finn_all[phenotype == "I48.0",p],8)
+phewas_finn_all[phenotype == "I48.9","p_short"] <- round(phewas_finn_all[phenotype == "I48.9",p],9)
+phewas_finn_all[phenotype == "I49.5","p_short"] <- round(phewas_finn_all[phenotype == "I49.5",p],20)
+phewas_finn_all[phenotype == "I49.9","p_short"] <- round(phewas_finn_all[phenotype == "I49.9",p],6)
+phewas_finn_all[phenotype == "I50.1","p_short"] <- round(phewas_finn_all[phenotype == "I50.1",p],4)
+phewas_finn_all[phenotype == "I50.9","p_short"] <- round(phewas_finn_all[phenotype == "I50.9",p],4)
+
+
+phewas_finn_red$CIpos <- exp(phewas_finn_red$beta+1.96*phewas_finn_red$SE)
+phewas_finn_red$CIneg <- exp(phewas_finn_red$beta-1.96*phewas_finn_red$SE)
+
+phewas_finn_all$CIpos <- exp(phewas_finn_all$beta+1.96*phewas_finn_all$SE)
+phewas_finn_all$CIneg <- exp(phewas_finn_all$beta-1.96*phewas_finn_all$SE)
+
+write.csv(phewas_finn_all, "CSV/phewas_finn_all_all.csv", row.names = FALSE)
+write.csv(phewas_finn_red, "CSV/phewas_finn_red_all.csv", row.names = FALSE)
+
+
+phewas_finn_all <- phewas_finn_all[phenotype %in% results_all$phenotype,]
+
+phewas_finn_red <- phewas_finn_red[phenotype %in% results_red$phenotype,]
+
+save(phewas_finn_red,file="RDAs/phewas_finn_red.Rda")
+save(phewas_finn_all,file="RDAs/phewas_finn_all.Rda")
+write.csv(phewas_finn_all, "CSV/phewas_finn_all.csv", row.names = FALSE)
+write.csv(phewas_finn_red, "CSV/phewas_finn_red.csv", row.names = FALSE)
+```
+
+
+```{r}
+plot_finn_red<-ggplot(phewas_finn_red, aes(x=paste(phenotype,"/ ",desc), y=OR,label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point( color = wild) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", color = wild) +
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(size = 2.5, nudge_x=.3, direction = "y") +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Association between the variant and ICD categories - FinnGen") 
+plot_finn_red
+ggsave("PLOT/plot_phewas_finngen_red.pdf", height = 8 , width = 8)
+ggsave("PLOT/plot_phewas_finngen_red.png", height = 4 , width = 8)
+
+plot_finn_all<-ggplot(phewas_finn_all, aes(x=paste(phenotype,"/ ",desc), y=OR,label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(color = wild) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", color =wild) +
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(size = 2.5, nudge_x=.3, direction = "y") +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2.5)) +
+  xlab("ICD-Codes and Descriptions") +
+  ylab("Odds Ratio") +
+  ggtitle("Association between the variant and ICD subcategories - FinnGen") +
+  theme(plot.margin = margin(0,0,0, 0.5, "cm"))
+plot_finn_all
+ggsave("PLOT/plot_phewas_finngen_all.pdf", height = 8 , width = 8)
+ggsave("PLOT/plot_phewas_finngen_all.png", height = 4 , width = 8)
+```
+
+```{r}
+results_all <- results_all[genTRUE >= 4, ]
+results_red <- results_red[genTRUE >= 4, ]
+
+results_red$Database <- "UK Biobank"
+complete_phewas_red <- data.table(dplyr::bind_rows(results_red, phewas_finn_red[phenotype %in% results_red$phenotype]))
+
+results_all$Database <- "UK Biobank"
+complete_phewas_all <- dplyr::bind_rows(results_all, phewas_finn_all[phenotype %in% results_all$phenotype])
+setorder(complete_phewas_all, cols = "phenotype")
+
+save(complete_phewas_red,file="RDAs/complete_phewas_red.Rda")
+save(complete_phewas_all,file="RDAs/complete_phewas_all.Rda")
+write.csv(complete_phewas_red,file="CSV/complete_phewas_red.csv", row.names = FALSE)
+write.csv(complete_phewas_all,file="CSV/complete_phewas_all.csv", row.names = FALSE)
+```
+
+
+```{r}
+
+
+plot_phewas_red<-ggplot(complete_phewas_red[phenotype !="I51"], aes(x=paste(phenotype,"/ ",desc), y=OR, group = Database, col = Database, label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", position = position_dodge(0.3))+
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(nudge_x = .3,
+    direction = "y",
+    size = 2.5) +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Association comparison between Finngen and UK Biobank - ICD categories") +
+  scale_color_manual(values = c(wild, het))+
+  scale_fill_discrete("Database", labels = c("FinnGen", "UK Biobank")) +
+  theme(legend.position = "right")
+  
+plot_phewas_red
+#ggsave("PLOT/plot_phewas_meta.pdf", height = 8 , width = 8)
+ggsave("PLOT/plot_phewas_meta_red.png", height = 4 , width = 8)
+
+plot_phewas_all<-ggplot(complete_phewas_all[-c(29:31)], aes(x=paste(phenotype,"/ ",desc), y=OR, group = Database, col = Database, label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", position = position_dodge(0.3))+
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  #theme(legend.position="none") +
+  geom_text_repel(nudge_x = .5,
+    direction = "y",
+    size = 2.5) +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2.5)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Comparison between Finngen and UK Biobank - ICD subcategories") +
+  scale_color_manual(values = c(wild, het)) +
+  theme(plot.margin = margin(0,0,0, 0.5, "cm"))
+  
+plot_phewas_all
+#ggsave("PLOT/plot_phewas_meta_all_new_onlyfinnp.pdf", height = 8 , width = 8)
+ggsave("PLOT/plot_phewas_meta_all_new_onlyfinnp.png", height = 4 , width = 8)
+
+```
+```{r}
+
+
+plot_phewas_red<-ggplot(complete_phewas_red[phenotype !="I51"], aes(x=paste(phenotype,"/ ",desc), y=OR, group = Database, col = Database, label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", position = position_dodge(0.3))+
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(nudge_x = .3,
+    direction = "y",
+    size = 2.5) +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Association comparison between Finngen and UK Biobank - ICD categories") +
+  scale_color_manual(values = c(wild, het))+
+  scale_fill_discrete("Database", labels = c("FinnGen", "UK Biobank")) +
+  theme(legend.position = "right")
+  
+plot_phewas_red
+#ggsave("PLOT/plot_phewas_meta.pdf", height = 8 , width = 8)
+#ggsave("PLOT/plot_phewas_meta_red.png", height = 4 , width = 8)
+
+plot_phewas_all<-ggplot(complete_phewas_all[-c(29:31)], aes(x=paste(phenotype,"/ ",desc), y=OR, group = Database, col = Database, label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", position = position_dodge(0.3))+
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  #theme(legend.position="none") +
+  geom_text_repel(nudge_x = .5,
+    direction = "y",
+    size = 2.5) +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2.5)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Comparison between Finngen and UK Biobank - ICD subcategories") +
+  scale_color_manual(values = c(wild, het)) +
+  theme(plot.margin = margin(0,0,0, 1.5, "cm"))
+  
+plot_phewas_all
+#ggsave("PLOT/plot_phewas_meta_all_new_onlyfinnp.pdf", height = 8 , width = 8)
+#ggsave("PLOT/plot_phewas_meta_all_new_onlyfinnp.png", height = 4 , width = 8)
+
+```
+
+
+```{r}
+
+
+plot_phewas_red<-ggplot(complete_phewas_red[phenotype %in% c("I47", "I48", "I49", "I50")], aes(x=paste(phenotype,"/ ",desc), y=OR, group = Database, col = Database, label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", position = position_dodge(0.3))+
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  #geom_text(position = position_dodge(width = 1), size = 3)+
+  geom_text_repel(nudge_x = .3,direction = "y",size = 2.5, segment.color = 'transparent') +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(-0.5, 2.5)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Association comparison between Finngen and UK Biobank - ICD categories") +
+  scale_color_manual(values = c(wild, het))+
+  scale_fill_discrete("Database", labels = c("FinnGen", "UK Biobank")) +
+  theme(legend.position = "right")  +
+  theme(plot.margin = margin(0,0,0, 1.5, "cm"))
+  
+plot_phewas_red
+#ggsave("PLOT/plot_phewas_meta.pdf", height = 8 , width = 8)
+ggsave("PLOT/plot_phewas_meta_red_onlyfinnrel.png", height = 6 , width = 7)
+
+plot_phewas_all<-ggplot(complete_phewas_all[phenotype %in% c("I47.1", "I48.0", "I48.9", "I49.5", "I49.9")], aes(x=paste(phenotype,"/ ",desc), y=OR, group = Database, col = Database, label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", position = position_dodge(0.3))+
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  #theme(legend.position="none") +
+  #geom_text( size = 2.5)+
+  geom_text_repel(nudge_x = .3,direction = "y",size = 2.5, segment.color = 'transparent') +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(-0.5, 2.5)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Comparison between Finngen and UK Biobank - ICD subcategories") +
+  scale_color_manual(values = c(wild, het)) +
+  theme(plot.margin = margin(0,0,0, 1.5, "cm"))
+  
+plot_phewas_all
+#ggsave("PLOT/plot_phewas_meta_all_new_onlyfinnp.pdf", height = 8 , width = 8)
+ggsave("PLOT/plot_phewas_meta_all_new_onlyfinnp.png", height = 6 , width = 7)
+
+```
+```{r}
+sub_red <-complete_phewas_red[phenotype %in% c("I47", "I48", "I49", "I50") & Database == "UK Biobank"]
+p.adjust(sub_red$p, method = "fdr")
+sub_all <-complete_phewas_all[phenotype %in% c("I47.1", "I48.0", "I48.9", "I49.5", "I49.9") & Database == "UK Biobank"]
+p.adjust(sub_all$p, method = "fdr")
+```
+
+
+```{r}
+library(psych)
+library(vtable)
+a <-describeBy(dat_total[,c(4,6,18,20,21,22)], dat_total$genotype, mat = TRUE) 
+write.csv(a, "CSV/summary_stats.csv", row.names = FALSE)
+summary(dat_total)
+a <- 
+  st(dat_total, group = 'genotype')
+write.csv(a, "CSV/summarystatistics.csv", row.names = FALSE)
+
+```
+
+```{r}
+library(furniture)
+
+dat_total %>%
+  group_by(genotype) %>%
+  table1(age, sex)
+3*(mean(dat_total$age)- median(dat_total$age))/ sd(dat_total$age)
+
+dat_total %>%
+  group_by(genotype ) %>%
+  table1(age, sex, death_age)
+```
+
+
+Missing: Descriptive plots age sex genotype and distributions
+
+```{r age, fig.width=4, fig.height=4}
+#axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"), 
+ybreaks = seq(0,500000,2000)
+bw = 1
+n_obs = sum(!is.na(dat_total$age))
+
+ggb <- ggplot(dat_total, aes(age)) +
+  geom_histogram(aes(y = ..density..), binwidth = bw, na.rm=TRUE, colour = wild, fill = "white") +
+  theme_rbook() +
+  stat_function(fun = dnorm, args = list(mean = mean(dat_total$age), sd = sd(dat_total$age))) +
+  scale_y_continuous("Counts", breaks = round(ybreaks / (bw * n_obs),3), labels = ybreaks) +
+  scale_x_continuous(breaks = seq(0, 100, 5)) +
+  labs(title="Age distribution",x="Age (Years)", y = "Count")
+ggb
+ggsave(paste("PLOT/age.pdf", sep = ""), height = 4 , width = 4)
+ggsave(paste("PLOT/age.png", sep = ""), height = 4 , width = 4)
+
+ggb <- ggplot(data = dat_total, mapping = aes(x = genotype, y =age, fill =genotype)) + 
+    geom_boxplot(outlier.size=0.2,na.rm=TRUE, colour = "black")+
+  theme_rbook() +
+  labs(x = "Genotype", y= "Age (years)", title ="Age comparison")  + 
+  theme(legend.position = "none")+
+  scale_x_discrete(labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_fill_manual(values=c("0"=wild,"1"=het))
+  #stat_summary(fun="mean")
+ggb
+ggsave(paste("PLOT/ageboxpl.pdf", sep = ""), height = 4, width = 4)
+ggsave(paste("PLOT/ageboxpl.png", sep = ""), height = 4, width = 4)
+```
+
+```{r sex, fig.width=6, fig.height=6}
+
+ggb <- ggplot(dat_total, aes(sex, age, fill = genotype)) +
+  geom_boxplot(outlier.size=0.2, na.rm=TRUE, colour = "black") +
+  theme_rbook() +
+  labs(title="Sex-age relation",x="Sex", y = "Age (years)") +
+  scale_fill_manual(values=c("0"=wild,"1"=het),name = "Genotype", labels=c("0" = "Wildtype", "1" = "Heterozygous")) +
+  scale_x_discrete(labels=c("1" = "Male", "2" = "Female")) +
+  scale_y_continuous(breaks = seq(0, 100, by = 10))
+ggb
+ggsave(paste("PLOT/sexage.pdf", sep = ""), height = 4 , width = 4)
+ggsave(paste("PLOT/sexage.png", sep = ""), height = 4 , width = 4)
+```
+### General statistics
+```{r}
+library(table1)
+summary(dat_total)
+dat_total %>%
+  group_by(genotype) %>%
+  table1(age, sex, birth_year)
+
+summary(dat_total)
+dat_total %>%
+  group_by(genotype) %>%
+  table1(age, sex, birth_year, death_age)
+```
+
