@@ -1,0 +1,190 @@
+---
+title: "Runable_Phewas_Code"
+output: html_document
+date: "2023-05-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Runable Phewas Code
+
+### ggplot libraries
+```{r}
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(stringi)
+library(data.table)
+```
+
+
+
+```{r}
+getwd()
+results_all = read.csv("CSV/results_all.csv",sep=',')
+results_red = read.csv("CSV/results_red.csv",sep=',')
+phewas_finn_red = read.csv("CSV/phewas_finn_all.csv",sep=',')
+phewas_finn_all = read.csv("CSV/phewas_finn_red.csv",sep=',')
+```
+
+### ggplot Theme
+```{r}
+
+theme_rbook <- function(base_size = 8, base_family = "", base_line_size = base_size/22, 
+                        base_rect_size = base_size/22) {         
+  theme( 
+    axis.title = element_text(size = 10, margin = margin(0,0, 20 ,0)),                               
+    axis.text.y = element_text(color = "black",size = 8, margin = margin(0,0, 0 ,0)),    
+    axis.text.x = element_text(color = "black",angle=45, hjust=1, size=8),
+    axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0)),
+    axis.title.x = element_text(margin = margin(t = 10, r = 0, b = 0, l = 0)),
+    plot.caption = element_text(size = 10, face = "italic"),  
+    plot.title = element_text(size = 10, 
+                                  hjust = 0.5, 
+                                   face = "bold", 
+                                 margin = margin(10,0,10,0)),
+    panel.background = element_rect(fill="white"),
+    panel.grid.major = element_line(colour = "grey", size = 0.2),
+    axis.line = element_line(size = 1, colour = "black"),
+    strip.background =element_rect(fill = "#cddcdd"),
+    panel.border = element_rect(colour = "black", fill=NA, size=0.2),
+    strip.text = element_text(colour = "black"),
+    legend.key=element_blank(),legend.margin=margin(0,0,0,3),
+    legend.box.spacing = unit(10, "pt"),
+    legend.position="right",
+    legend.background=element_blank(),
+    legend.title = element_text(size = 8),
+    legend.text = element_text(size = 6)
+    
+    
+    
+  )
+}
+```
+
+```{r}
+wild = "#1A5276"
+het = "#FF8300"
+```
+
+```{r}
+plot_icd_red<-ggplot(results_red, aes(x=paste(phenotype,"/ ",desc), y=OR,label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point( color = wild) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", color =wild) +
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(size = 2.5, nudge_x=.2, direction = "y") +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  theme(plot.margin = margin(0,0,0, 1.5, "cm"))+
+  ggtitle("Association between the genotype and ICD categories") +
+  theme(plot.margin = margin(0,0,0, 3, "cm"))
+plot_icd_red
+
+
+outliershape <- ifelse(results_all$OR<2,16,17)
+
+#results_all$icd_correct <- stri_sub(results_all$phenotype, 4, 3) <- "."
+plot_icd_all<-ggplot(results_all, aes(x=paste(phenotype,"/ ",desc), y=ifelse(OR<2,OR,2),label=p_short, 3))+
+  geom_hline(aes(yintercept= 1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(shape =outliershape, color =wild) +
+  geom_errorbar(aes(ymin=CIneg, ymax=ifelse(CIpos> 2.5, 2.5, CIpos)), width=0, alpha=0.7, stat = "identity", color = wild) +
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(size = 2.5, nudge_x=.3, direction = "y") +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Association between the genotype and ICD subcategories") +
+  theme(plot.margin = margin(0,0,0, 3, "cm"))
+ # scale_shape_manual(values = c(1, 4))
+plot_icd_all
+
+```
+```{r}
+plot_finn_red<-ggplot(phewas_finn_red, aes(x=paste(phenotype,"/ ",desc), y=OR,label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point( color = wild) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", color = wild) +
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(size = 2.5, nudge_x=.3, direction = "y") +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 3)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Association between the variant and ICD categories - FinnGen") 
+plot_finn_red
+
+
+plot_finn_all<-ggplot(phewas_finn_all, aes(x=paste(phenotype,"/ ",desc), y=OR,label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(color = wild) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", color =wild) +
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(size = 2.5, nudge_x=.3, direction = "y") +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2.5)) +
+  xlab("ICD-Codes and Descriptions") +
+  ylab("Odds Ratio") +
+  ggtitle("Association between the variant and ICD subcategories - FinnGen") +
+  theme(plot.margin = margin(0,0,0, 0.5, "cm"))
+plot_finn_all
+
+```
+
+
+```{r}
+complete_phewas_red = read.csv("CSV/complete_phewas_red.csv",sep=',')
+complete_phewas_all = read.csv("CSV/complete_phewas_all.csv",sep=',')
+```
+
+
+```{r}
+plot_phewas_red<-ggplot(complete_phewas_red[complete_phewas_red$phenotype !="I51"], aes(x=paste(phenotype,"/ ",desc), y=OR, group = Database, col = Database, label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", position = position_dodge(0.3))+
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  theme(legend.position="none") +
+  geom_text_repel(nudge_x = .3,
+    direction = "y",
+    size = 2.5) +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Association comparison between Finngen and UK Biobank - ICD categories") +
+  scale_color_manual(values = c(wild, het))+
+  scale_fill_discrete("Database", labels = c("FinnGen", "UK Biobank")) +
+  theme(legend.position = "right")
+  
+plot_phewas_red
+
+
+plot_phewas_all<-ggplot(complete_phewas_all[-c(29:31)], aes(x=paste(phenotype,"/ ",desc), y=OR, group = Database, col = Database, label=p_short))+
+  geom_hline(aes(yintercept=1), linetype="dashed", linewidth=0.3, alpha=0.5)+
+  geom_point(position = position_dodge(0.3)) +
+  geom_errorbar(aes(ymin=CIneg, ymax=CIpos), width=0, alpha=0.7, stat = "identity", position = position_dodge(0.3))+
+  theme_rbook() +  #geom_text(hjust=0, vjust=0) +
+  #theme(legend.position="none") +
+  geom_text_repel(nudge_x = .5,
+    direction = "y",
+    size = 2.5) +
+  scale_x_discrete(labels = label_wrap(40)) +
+  coord_cartesian(ylim = c(0, 2.5)) +
+  xlab("ICD-codes and descriptions") +
+  ylab("Odds ratio") +
+  ggtitle("Comparison between Finngen and UK Biobank - ICD subcategories") +
+  scale_color_manual(values = c(wild, het)) +
+  theme(plot.margin = margin(0,0,0, 2, "cm"))
+  
+plot_phewas_all
+```

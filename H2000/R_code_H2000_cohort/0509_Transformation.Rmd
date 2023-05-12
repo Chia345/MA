@@ -316,24 +316,6 @@ summary(dat_excl)
 hist(dat_excl$heart_rate, xlab = "diast BP", main = paste("Histogram of", "Mean Diastolic Bloodpressure"))
 ```
 
-hist(dat_excl$diast_bp, xlab = "diast BP", main = paste("Histogram of", "Mean Diastolic Bloodpressure"))
-
-WIRD BEARBEITET 24.1.2023
-```{r pressure excl}
-
-#dat_excl <- dat_excl[heart_rate <=100 | is.na(heart_rate),]
-#png("heartr.png")
-#hist(dat_excl$heart_rate, xlab = "Heart Rate", main = paste("Histogram of", "Heart Rate"))
-#dev.off()
-#dat_excl[1, c("qt", "Correctedqt","average_rr")]
-#png("average_rr.png")
-#hist(dat_excl$average_rr, xlab = "Average rr", main = paste("Histogram of", "Average rr"))
-#dev.off()
-#View(dat_excl)
-#hist(dat_excl$Correctedqt, xlab = "Average rr", main = paste("Histogram of", "Average rr"))
-
-```
-
 
 ```{r saveexcl}
 
